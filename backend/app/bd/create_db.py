@@ -35,43 +35,19 @@ CREATE TABLE IF NOT EXISTS Torneo (
 """)
 
 # ========================================
-# CANCHAS CONCRETAS (sin clase base)
+# CANCHA (unificada)
 # ========================================
-
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS CanchaFutbol (
+CREATE TABLE IF NOT EXISTS Cancha (
     id_cancha INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL CHECK (tipo IN ('futbol', 'padel', 'basquet')),
     nombre TEXT NOT NULL,
     superficie TEXT,
     tamaño TEXT,
     techada INTEGER DEFAULT 0,
     iluminacion INTEGER DEFAULT 0,
     estado TEXT DEFAULT 'disponible',
-    precio_base REAL NOT NULL
-);
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS CanchaPadel (
-    id_cancha INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    superficie TEXT,
-    techada INTEGER DEFAULT 0,
-    iluminacion INTEGER DEFAULT 0,
-    estado TEXT DEFAULT 'disponible',
-    precio_base REAL NOT NULL
-);
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS CanchaBasquet (
-    id_cancha INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    tamaño TEXT,
-    techada INTEGER DEFAULT 0,
-    iluminacion INTEGER DEFAULT 0,
-    estado TEXT DEFAULT 'disponible',
-    precio_base REAL NOT NULL
+    precio_base REAL NOT NULL CHECK (precio_base >= 0)
 );
 """)
 
@@ -90,18 +66,19 @@ CREATE TABLE IF NOT EXISTS ServicioAdicional (
 """)
 
 # ========================================
-# TURNOS (comparten FK a distintas canchas)
+# TURNOS
 # ========================================
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS Turno (
     id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo_cancha TEXT NOT NULL CHECK (tipo_cancha IN ('futbol','padel','basquet')),
     id_cancha INTEGER NOT NULL,
     fecha DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
     estado TEXT DEFAULT 'disponible',
-    CONSTRAINT ck_turno_horas CHECK (hora_fin > hora_inicio)
+    CONSTRAINT ck_turno_horas CHECK (hora_fin > hora_inicio),
+    FOREIGN KEY (id_cancha) REFERENCES Cancha(id_cancha)
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
 """)
 
@@ -111,19 +88,22 @@ CREATE TABLE IF NOT EXISTS Turno (
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS Reserva (
     id_reserva INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo_cancha TEXT NOT NULL CHECK (tipo_cancha IN ('futbol','padel','basquet')),
     id_cancha INTEGER NOT NULL,
     id_turno INTEGER NOT NULL,
     id_cliente INTEGER NOT NULL,
     id_torneo INTEGER,
-    precio_total REAL NOT NULL,
+    precio_total REAL NOT NULL CHECK (precio_total >= 0),
     estado TEXT DEFAULT 'pendiente',
     origen TEXT DEFAULT 'online',
+    FOREIGN KEY (id_cancha) REFERENCES Cancha(id_cancha)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_turno) REFERENCES Turno(id_turno)
+        ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (id_cliente) REFERENCES Usuario(id_usuario)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (id_torneo) REFERENCES Torneo(id_torneo)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    UNIQUE (tipo_cancha, id_cancha, id_turno)
+    UNIQUE (id_cancha, id_turno)
 );
 """)
 
@@ -165,4 +145,4 @@ CREATE TABLE IF NOT EXISTS Pago (
 
 conn.commit()
 conn.close()
-print("✅ Base de datos creada correctamente sin tabla base Cancha (herencia manejada en modelo).")
+print("✅ Base de datos creada correctamente con tabla única Cancha.")
