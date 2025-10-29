@@ -205,3 +205,51 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ========================================
+# ARCHIVOS Y DIRECTORIOS PROPIOS DEL PROYECTO
+# ========================================
+
+# 🗃️ Bases de datos locales (no deben subirse al repo)
+backend/app/bd/*.db
+backend/app/bd/__pycache__/
+backend/app/bd/*.sqlite3
+backend/app/bd/*.sqlite
+
+# 🔐 Archivos de entorno (variables sensibles)
+.env
+*.env
+.env.*
+
+# 🧪 Caché y archivos temporales del proyecto
+*.log
+*.tmp
+*.bak
+
+# 🧩 Entornos virtuales locales
+backend/.venv/
+frontend/node_modules/
+
+# ⚛️ Archivos del front (build local)
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.eslintcache
+
+# 🧰 Configuración de IDE (de preferencia no subir)
+.idea/
+.vscode/
+
+# 📦 Dependencias o lock files que se regeneran
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 📂 Archivos generados por tests o seeds
+backend/app/tests/__pycache__/
+backend/app/bd/seed_*.pyc
+backend/app/bd/test_*.db
+
+# 🧠 Archivos temporales de render o backups
+*.DS_Store
+Thumbs.db
