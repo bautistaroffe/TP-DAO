@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from backend.app.repositorios.cancha_repo import CanchaRepository
 class Cancha(ABC):
     """Clase base abstracta para las distintas canchas deportivas."""
 
@@ -41,6 +41,56 @@ class Cancha(ABC):
     def calcular_precio_total(self):
         """Cada tipo de cancha implementa su propio cálculo."""
         pass
+
+    # ===========================================
+    # MÉTODOS ABM (Altas, Bajas, Modificaciones, Consultas)
+    # ===========================================
+
+    def guardar(self):
+        """
+        Guarda o actualiza el registro en la base de datos.
+        Si no tiene ID, se inserta; si ya tiene ID, se actualiza.
+        """
+        repo = CanchaRepository()
+        if getattr(self, 'id_' + self.__class__.__name__.lower()):
+            repo.actualizar(self)
+        else:
+            repo.agregar(self)
+        repo.cerrar()
+        return self
+
+    def eliminar(self):
+        """
+        Elimina el registro actual de la base de datos.
+        """
+        repo = CanchaRepository()
+        id_attr = 'id_' + self.__class__.__name__.lower()
+        id_valor = getattr(self, id_attr, None)
+        if not id_valor:
+            raise ValueError(f"{self.__class__.__name__} no existe en la base de datos.")
+        repo.eliminar(id_valor)
+        repo.cerrar()
+
+    @staticmethod
+    def listar_todos():
+        """
+        Devuelve una lista de todos los registros de esta entidad.
+        """
+        repo = CanchaRepository()
+        objetos = repo.listar_todos()
+        repo.cerrar()
+        return objetos
+
+    @staticmethod
+    def obtener_por_id(id_valor):
+        """
+        Devuelve un registro según su ID, o None si no existe.
+        """
+        repo = CanchaRepository()
+        objeto = repo.obtener_por_id(id_valor)
+        repo.cerrar()
+        return objeto
+
 
     def __repr__(self):
         return f"<Cancha {self.id_cancha}: {self.nombre} ({self.__class__.__name__})>"

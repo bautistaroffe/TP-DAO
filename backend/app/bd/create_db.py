@@ -1,6 +1,6 @@
 import sqlite3
 
-RUTA_BD = "./bd_ecopark.db"
+RUTA_BD = "./bd_canchas.db"
 conn = sqlite3.connect(RUTA_BD)
 cursor = conn.cursor()
 cursor.execute("PRAGMA foreign_keys = ON;")
@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS Turno (
 # ========================================
 # RESERVAS
 # ========================================
+# ========================================
+# RESERVAS
+# ========================================
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS Reserva (
     id_reserva INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,6 +95,7 @@ CREATE TABLE IF NOT EXISTS Reserva (
     id_turno INTEGER NOT NULL,
     id_cliente INTEGER NOT NULL,
     id_torneo INTEGER,
+    id_servicio INTEGER,
     precio_total REAL NOT NULL CHECK (precio_total >= 0),
     estado TEXT DEFAULT 'pendiente',
     origen TEXT DEFAULT 'online',
@@ -103,25 +107,12 @@ CREATE TABLE IF NOT EXISTS Reserva (
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (id_torneo) REFERENCES Torneo(id_torneo)
         ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_servicio) REFERENCES ServicioAdicional(id_servicio)
+        ON DELETE SET NULL ON UPDATE CASCADE,
     UNIQUE (id_cancha, id_turno)
 );
 """)
 
-# ========================================
-# RELACIÓN RESERVA - SERVICIO
-# ========================================
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS ReservaServicio (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_reserva INTEGER NOT NULL,
-    id_servicio INTEGER NOT NULL,
-    FOREIGN KEY (id_reserva) REFERENCES Reserva(id_reserva)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (id_servicio) REFERENCES ServicioAdicional(id_servicio)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    UNIQUE (id_reserva, id_servicio)
-);
-""")
 
 # ========================================
 # PAGOS
