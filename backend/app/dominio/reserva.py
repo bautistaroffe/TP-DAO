@@ -68,7 +68,7 @@ class Reserva:
         Devuelve una lista de todos los registros de esta entidad.
         """
         repo = ReservaRepository()
-        objetos = repo.listar_todos()
+        objetos = repo.listar_todas()
         repo.cerrar()
         return objetos
 
