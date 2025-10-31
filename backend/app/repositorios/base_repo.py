@@ -18,7 +18,6 @@ class BaseRepository:
     def ejecutar(self, query, params=()):
         """Ejecuta una consulta SQL (INSERT, UPDATE, DELETE) y confirma cambios."""
         self.cursor.execute(query, params)
-        self.conn.commit()
 
     def obtener_uno(self, query, params=()):
         """Ejecuta una consulta y devuelve una sola fila como dict o None."""
@@ -45,3 +44,11 @@ class BaseRepository:
     def cerrar(self):
         """Cierra la conexión con la base de datos."""
         self.conn.close()
+
+    def commit(self):
+        """Confirma los cambios pendientes en la base de datos."""
+        self.conn.commit()
+
+    def rollback(self):
+        """Revierte los cambios pendientes (si hubo algún error)."""
+        self.conn.rollback()

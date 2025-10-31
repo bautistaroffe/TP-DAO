@@ -16,7 +16,7 @@ class TurnoRepository(BaseRepository):
         filas = self.obtener_todos("SELECT * FROM Turno")
         return [Turno(**f) for f in filas]
 
-    def obtener_por_id(self, id_turno):
+    def obtener_por_id(self, tabla, id_columna, id_turno):
         fila = super().obtener_por_id("Turno", "id_turno", id_turno)
         return Turno(**fila) if fila else None
 
@@ -29,3 +29,12 @@ class TurnoRepository(BaseRepository):
 
     def eliminar(self, id_turno):
         self.ejecutar("DELETE FROM Turno WHERE id_turno=?", (id_turno,))
+
+    def marcar_como_reservado(self, id_turno):
+        """Marca el turno como reservado (no disponible)."""
+        self.ejecutar("""
+            UPDATE Turno
+            SET estado = 'reservado'
+            WHERE id_turno = ?
+        """, (id_turno,))
+

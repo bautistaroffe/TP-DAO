@@ -16,7 +16,7 @@ class UsuarioRepository(BaseRepository):
         filas = self.obtener_todos("SELECT * FROM Usuario")
         return [Usuario(**f) for f in filas]
 
-    def obtener_por_id(self, id_usuario):
+    def obtener_por_id(self, tabla, id_columna, id_usuario):
         fila = super().obtener_por_id("Usuario", "id_usuario", id_usuario)
         return Usuario(**fila) if fila else None
 

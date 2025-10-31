@@ -18,7 +18,7 @@ class ReservaRepository(BaseRepository):
         filas = self.obtener_todos("SELECT * FROM Reserva")
         return [Reserva(**f) for f in filas]
 
-    def obtener_por_id(self, id_reserva):
+    def obtener_por_id(self, tabla, id_columna, id_reserva):
         fila = super().obtener_por_id("Reserva", "id_reserva", id_reserva)
         return Reserva(**fila) if fila else None
 
