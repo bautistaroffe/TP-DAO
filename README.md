@@ -1,6 +1,7 @@
 # TP-DAO
 
 Estructura
+```plaintext
 reservas-canchas/
 ├── README.md
 ├── .gitignore
@@ -92,3 +93,4 @@ reservas-canchas/
     ├── diagrama_clases.pdf
     ├── diagrama_casos_uso.pdf
     └── plan_trabajo.md
+```
