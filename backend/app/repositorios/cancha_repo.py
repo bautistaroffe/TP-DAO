@@ -57,3 +57,7 @@ class CanchaRepository(BaseRepository):
 
     def eliminar(self, id_cancha):
         self.ejecutar("DELETE FROM Cancha WHERE id_cancha=?", (id_cancha,))
+    
+    def obtener_por_tipo(self, tipo):
+        filas = self.obtener_todos("SELECT * FROM Cancha WHERE tipo=?", (tipo,))
+        return [Cancha(**f) for f in filas]
