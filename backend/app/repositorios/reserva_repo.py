@@ -37,3 +37,16 @@ class ReservaRepository(BaseRepository):
 
     def eliminar(self, id_reserva):
         self.ejecutar("DELETE FROM Reserva WHERE id_reserva=?", (id_reserva,))
+
+    def obtener_por_cliente(self, id_cliente):
+        filas = self.obtener_todos("SELECT * FROM Reserva WHERE id_cliente=?", (id_cliente,))
+        return [Reserva(**f) for f in filas]
+
+    def obtener_reservas_por_cancha_y_periodo(self, id_cancha, fecha_inicio, fecha_fin):
+        query = """
+            SELECT r.* FROM Reserva r
+            JOIN Turno t ON r.id_turno = t.id_turno
+            WHERE r.id_cancha = ? AND t.fecha BETWEEN ? AND ?
+        """
+        filas = self.obtener_todos(query, (id_cancha, fecha_inicio, fecha_fin))
+        return [Reserva(**f) for f in filas]
