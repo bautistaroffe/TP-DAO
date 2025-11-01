@@ -49,3 +49,28 @@ class ReportesService:
                 "origen": reserva.origen
             })
         return reporte
+
+    def generar_reporte_canchas_mas_reservadas(self, top_n=5):
+        filas = self.cancha_repo.obtener_mas_reservadas(top_n)
+        reporte = []
+        for fila in filas:
+            reporte.append({
+                "cancha": fila['nombre'],
+                "total_reservas": fila['total_reservas']
+            })
+        return reporte
+
+    def generar_reporte_utilizacion_mensual(self, año):
+        datos = self.reserva_repo.obtener_utilizacion_mensual(año)
+        reporte = {}
+        for fila in datos:
+            cancha = fila["cancha"]
+            mes = int(fila["mes"])
+            total = fila["total_reservas"]
+            if cancha not in reporte:
+                reporte[cancha] = [0] * 12
+            reporte[cancha][mes - 1] = total
+        return reporte
+
+
+
