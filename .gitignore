@@ -240,10 +240,7 @@ frontend/.eslintcache
 .idea/
 .vscode/
 
-# 📦 Dependencias o lock files que se regeneran
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+
 
 # 📂 Archivos generados por tests o seeds
 backend/app/tests/__pycache__/
@@ -278,9 +275,8 @@ frontend/.DS_Store
 frontend/Thumbs.db
 
 # Archivos de lock (opcional, si preferís que se regeneren)
-frontend/package-lock.json
-frontend/yarn.lock
-frontend/pnpm-lock.yaml
+
+
 
 # Coverage / pruebas front
 frontend/coverage/
