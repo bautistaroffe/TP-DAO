@@ -1,0 +1,143 @@
+/* ======================
+   HEADER
+   ====================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0d1b2a;
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* === Logo grande y responsive === */
+.header-logo img {
+  width: 200px;
+  height: auto;
+  max-width: 100%;
+  transition: all 0.3s ease;
+}
+
+/* Logo se reduce en pantallas pequeñas */
+@media (max-width: 768px) {
+  .header-logo img {
+    width: 160px; /* ocupa más ancho visual */
+  }
+}
+
+/* === Navbar desktop === */
+.navbar {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.navbar a {
+  color: white;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.navbar a:hover {
+  color: var(--powder-blue);
+}
+
+.navbar a.active {
+  text-decoration: underline;
+}
+
+/* === Botón hamburguesa (oculto en desktop) === */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+/* === MODO MÓVIL === */
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: block;
+  }
+
+  .navbar {
+    display: none;
+    flex-direction: column;
+    background: var(--marian-blue);
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    padding: 1rem 0;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+  }
+
+  .navbar.show {
+    display: flex;
+  }
+
+  .header.open {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .navbar a {
+    padding: 0.5rem 1.5rem;
+    text-align: left;
+    width: 100%;
+  }
+
+  .navbar a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.footer {
+  background-color: var(--charcoal);
+  color: white;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.footer-logo img {
+  width: 100px;
+  height: auto;
+  max-width: 100%;
+  margin-right: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+/* Footer responsivo */
+@media (max-width: 768px) {
+  .footer {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .footer-logo img {
+    width: 160px;
+    margin-bottom: 0.5rem;
+  }
+}
+
+@keyframes bounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.15); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.logo.bounce {
+  animation: bounce 0.5s ease;
+}

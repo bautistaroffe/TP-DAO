@@ -16,6 +16,11 @@ def listar_canchas():
     canchas = cancha_service.listar_canchas()
     return canchas
 
+# GET /canchas/tipo/{tipo}
+@router.get("/tipo/{tipo}")
+def obtener_por_tipo(tipo: str):
+    canchas = cancha_service.obtener_canchas_por_tipo(tipo)
+    return canchas
 
 # GET /canchas/{id_cancha}
 @router.get("/{id_cancha}")
@@ -26,11 +31,6 @@ def obtener_cancha(id_cancha: int):
     return cancha
 
 
-# GET /canchas/tipo/{tipo}
-@router.get("/tipo/{tipo}")
-def obtener_por_tipo(tipo: str):
-    canchas = cancha_service.obtener_canchas_por_tipo(tipo)
-    return canchas
 
 
 # POST /canchas
@@ -46,7 +46,7 @@ def actualizar_cancha(id_cancha: int, cancha: Cancha):
     cancha_existente = cancha_service.obtener_cancha_por_id(id_cancha)
     if not cancha_existente:
         raise HTTPException(status_code=404, detail="Cancha no encontrada")
-    if cancha.id != id_cancha:
+    if cancha.id_cancha != id_cancha:
         raise HTTPException(status_code=400, detail="El ID de la cancha no coincide con el ID de la ruta")
     cancha_service.actualizar_cancha(cancha)
     return {"mensaje": f"Cancha {id_cancha} actualizada correctamente"}
