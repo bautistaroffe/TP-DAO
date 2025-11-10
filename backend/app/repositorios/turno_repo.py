@@ -38,3 +38,12 @@ class TurnoRepository(BaseRepository):
             WHERE id_turno = ?
         """, (id_turno,))
 
+    def marcar_como_disponible(self, id_turno):
+        """Marca el turno como disponible nuevamente."""
+        self.ejecutar("""
+            UPDATE Turno
+            SET estado = 'disponible'
+            WHERE id_turno = ?
+        """, (id_turno,))
+
+

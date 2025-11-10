@@ -1,4 +1,4 @@
-from backend.app.repositorios.adicional_repo import AdicionalRepository
+from backend.app.repositorios.adicional_repo import ServicioAdicionalRepository
 
 
 class ServicioAdicional:
@@ -45,7 +45,7 @@ class ServicioAdicional:
         Guarda o actualiza el registro en la base de datos.
         Si no tiene ID, se inserta; si ya tiene ID, se actualiza.
         """
-        repo = AdicionalRepository()
+        repo = ServicioAdicionalRepository()
         if getattr(self, 'id_' + self.__class__.__name__.lower()):
             repo.actualizar(self)
         else:
@@ -57,7 +57,7 @@ class ServicioAdicional:
         """
         Elimina el registro actual de la base de datos.
         """
-        repo = AdicionalRepository()
+        repo = ServicioAdicionalRepository()
         id_attr = 'id_' + self.__class__.__name__.lower()
         id_valor = getattr(self, id_attr, None)
         if not id_valor:
@@ -70,7 +70,7 @@ class ServicioAdicional:
         """
         Devuelve una lista de todos los registros de esta entidad.
         """
-        repo = AdicionalRepository()
+        repo = ServicioAdicionalRepository()
         objetos = repo.listar_todos()
         repo.cerrar()
         return objetos
@@ -80,7 +80,7 @@ class ServicioAdicional:
         """
         Devuelve un registro según su ID, o None si no existe.
         """
-        repo = AdicionalRepository()
+        repo = ServicioAdicionalRepository()
         objeto = repo.obtener_por_id(id_valor)
         repo.cerrar()
         return objeto
