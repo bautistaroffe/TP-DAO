@@ -57,6 +57,18 @@ class CanchaRepository(BaseRepository):
 
     def eliminar(self, id_cancha):
         self.ejecutar("DELETE FROM Cancha WHERE id_cancha=?", (id_cancha,))
+
+    def obtener_mas_reservadas(self, top_n=5):
+        def obtener_mas_reservadas(self, top_n=5):
+            query = """
+                SELECT c.id_cancha, c.nombre, COUNT(r.id_reserva) AS total_reservas
+                FROM Cancha c
+                LEFT JOIN Reserva r ON c.id_cancha = r.id_cancha
+                GROUP BY c.id_cancha
+                ORDER BY total_reservas DESC
+                LIMIT ?
+            """
+            return self.obtener_todos(query, (top_n,))
     
     def obtener_por_tipo(self, tipo):
         filas = self.obtener_todos("SELECT * FROM Cancha WHERE tipo=?", (tipo,))
