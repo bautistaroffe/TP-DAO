@@ -94,3 +94,5 @@ reservas-canchas/
     ├── diagrama_casos_uso.pdf
     └── plan_trabajo.md
 ```
+INSTRUCCIONES
+Los pasos y requisitos para correr el frontend estan en el README.md dentro de la carptea frontend

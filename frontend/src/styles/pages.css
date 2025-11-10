@@ -1,0 +1,298 @@
+/* ======================
+   HOME
+   ====================== */
+.home-page {
+  text-align: center;
+  width: 100%;
+}
+
+.home-page .hero {
+  background: linear-gradient(90deg, var(--marian-blue), var(--cerulean));
+  color: white;
+  padding: 2.5rem 1rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 3rem;
+  width: 100%;
+  max-width: 900px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.home-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.home-actions button {
+  background-color: var(--powder-blue);
+  color: var(--charcoal);
+  font-weight: 600;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.home-actions button:hover {
+  background-color: var(--powder-blue);
+  transform: scale(1.05) ;
+
+}
+
+.gallery {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto 3rem auto;
+  text-align: center;
+}
+
+.gallery-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+}
+
+.gallery-grid img {
+  flex: 1 1 300px;   /* ocupa espacio pero se adapta */
+  max-width: 300px;  /* límite de ancho */
+  width: 100%;
+  height: 220px;
+  border-radius: 14px;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.gallery-grid img:hover {
+  transform: scale(1.03);
+}
+/* una fila en pantallas chicas */
+@media (max-width: 900px) {
+  .gallery-grid {
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+  .gallery-grid img {
+    max-width: 90%;
+  }
+}
+
+.map-section {
+  width: 100%;
+  max-width: 900px;
+}
+/* ======================
+   PREDIO PAGE
+   ====================== */
+
+
+.predio-page {
+  width: 100%;
+  min-height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem 4rem 1rem;
+}
+
+.predio-container {
+  text-align: center;
+  max-width: 1100px;
+  width: 100%;
+}
+
+
+.hero {
+  background: linear-gradient(90deg, var(--marian-blue), var(--cerulean));
+  color: white;
+  padding: 2.5rem 1rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 3rem;
+  width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hero h1 {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+    color: var(--alice-blue) !important;
+}
+
+.hero p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+
+
+.predio-container h2 {
+  font-size: 2.2rem;
+  color: #1e3a8a; /* azul profundo */
+  margin-bottom: 0.5rem;
+}
+.predio-page h1 {
+  color: var(--marian-blue)
+}
+
+.predio-container .sub {
+  color: #4b5563;
+  font-size: 1.1rem;
+  margin-bottom: 3rem;
+}
+
+/* === Grid de tarjetas === */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  justify-content: center;
+  align-items: stretch;
+}
+
+/* === Tarjetas === */
+.card {
+  background: var(--alice-blue) ;
+  border-radius: 8px !important;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8);
+
+}
+
+.card h3 {
+  font-size: 1.4rem;
+  color: #111827;
+  margin-bottom: 0.6rem;
+}
+
+.card p {
+  color: #4b5563;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+/* === Botones === */
+.card button {
+  color: white;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.card button:hover {
+  background-color: #1e40af;
+  transform: scale(1.05);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .predio-container h2 {
+    font-size: 1.8rem;
+  }
+  .card {
+    padding: 1.5rem 1rem;
+  }
+}
+
+/* ======================
+   REPORTES PAGE
+   ====================== */
+.reportes-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--alice-blue);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.reportes-page h2 {
+  color: var(--marian-blue);
+  margin-bottom: 0.5rem;
+}
+
+.reportes-page p {
+  color: var(--charcoal);
+  margin-bottom: 2rem;
+}
+
+/* 🔹 Grid flexible centrado */
+.report-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* 🔹 Tarjetas uniformes */
+.report-card {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  width: 320px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.report-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 🔹 Contenido interno */
+.report-card h3 {
+  color: var(--marian-blue);
+  margin-bottom: 1rem;
+}
+
+.chart-placeholder {
+  background-color: var(--alice-blue);
+  border: 2px dashed var(--powder-blue);
+  border-radius: 12px;
+  height: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--cerulean);
+  font-size: 2rem;
+  transition: transform 0.3s ease;
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+  .report-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .report-card {
+    width: 90%;
+    max-width: 400px;
+  }
+}

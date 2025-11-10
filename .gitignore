@@ -253,3 +253,35 @@ backend/app/bd/test_*.db
 # 🧠 Archivos temporales de render o backups
 *.DS_Store
 Thumbs.db
+
+# ========================================
+# FRONTEND (React + Vite)
+# ========================================
+
+# Dependencias locales de Node.js
+frontend/node_modules/
+
+# Archivos de build / distribución
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.eslintcache
+
+# Archivos temporales o de entorno
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
+# Archivos de configuración de editor o sistema
+frontend/.DS_Store
+frontend/Thumbs.db
+
+# Archivos de lock (opcional, si preferís que se regeneren)
+frontend/package-lock.json
+frontend/yarn.lock
+frontend/pnpm-lock.yaml
+
+# Coverage / pruebas front
+frontend/coverage/
+
