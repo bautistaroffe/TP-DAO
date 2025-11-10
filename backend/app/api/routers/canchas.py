@@ -30,9 +30,6 @@ def obtener_cancha(id_cancha: int):
         raise HTTPException(status_code=404, detail="Cancha no encontrada")
     return cancha
 
-
-
-
 # POST /canchas
 @router.post("/")
 def agregar_cancha(cancha: Cancha):
