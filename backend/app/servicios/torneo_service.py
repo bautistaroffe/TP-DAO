@@ -1,4 +1,4 @@
-# python
+
 from datetime import date
 
 from backend.app.dominio.torneo import Torneo
