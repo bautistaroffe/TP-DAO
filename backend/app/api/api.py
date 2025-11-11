@@ -6,6 +6,7 @@ from backend.app.api.routers.turnos import router as turnos_router
 from backend.app.api.routers.usuarios import router as usuarios_router
 from backend.app.api.routers.pagos import router as pagos_router
 from backend.app.api.routers.adicional import router as servicios_adicionales_router
+from backend.app.api.routers.reportes import router as reportes_router
 
 app = FastAPI(
     title="API de Gestión de Canchas Deportivas",
@@ -23,6 +24,7 @@ app.include_router(turnos_router)
 app.include_router(usuarios_router)
 app.include_router(pagos_router)
 app.include_router(servicios_adicionales_router)
+app.include_router(reportes_router)
 
 
 # ============================
