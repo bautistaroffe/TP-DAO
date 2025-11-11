@@ -99,3 +99,10 @@ Los pasos y requisitos para correr el frontend estan en el README.md dentro de l
 Los pasos para ejecutar el practico son:nose si hay q descargar algo o no.
 posicionarse en la raiz y ejecutar:
  python -m uvicorn backend.app.api.api:app --reload
+
+Para probar los routers sin correr el front:
+- correr el back e ir al siguiente link:
+http://127.0.0.1:8000/docs
+
+Para generar datos para prubeas recomiendo:
+https://mostly.ai/

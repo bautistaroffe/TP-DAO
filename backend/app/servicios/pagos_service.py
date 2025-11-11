@@ -5,10 +5,6 @@ from backend.app.repositorios.reserva_repo import ReservaRepository
 
 
 class PagoService:
-    def __init__(self):
-        self.pago_repo = PagoRepository()
-        self.reserva_repo = ReservaRepository()
-
     # ============================
     # VALIDACIONES
     # ============================
@@ -26,27 +22,22 @@ class PagoService:
     # PROCESAR PAGO
     # ============================
     def procesar_pago(self, id_usuario, id_reserva, monto, metodo):
-        """
-        Crea y procesa un pago, asociándolo a una reserva.
-        Si el pago es aprobado, cambia el estado de la reserva a 'pagada'.
-        Si ya existe un pago asociado a la reserva, lo bloquea.
-        """
         self._validar_campos(id_usuario, id_reserva, monto, metodo)
 
+        repo_pago = PagoRepository()
+        repo_reserva = ReservaRepository()
+
         try:
-            # Verificar reserva
-            reserva = self.reserva_repo.obtener_por_id(id_reserva)
+            reserva = repo_reserva.obtener_por_id(id_reserva)
             if not reserva:
                 raise ValueError("Reserva no encontrada.")
             if reserva.estado in ("cancelada", "expirada"):
                 raise ValueError("No se puede procesar un pago para una reserva cancelada o expirada.")
 
-            # Evitar pagos duplicados
-            pago_existente = self.pago_repo.obtener_por_reserva(id_reserva)
+            pago_existente = repo_pago.obtener_por_reserva(id_reserva)
             if pago_existente:
                 raise ValueError("Ya existe un pago asociado a esta reserva.")
 
-            # Crear pago
             pago = Pago(
                 id_usuario=id_usuario,
                 id_reserva=id_reserva,
@@ -56,19 +47,16 @@ class PagoService:
                 estado_transaccion="pendiente"
             )
 
-            # Procesamiento del pago (simulado o real según Pago.procesarPago)
             estado = pago.procesarPago()
 
-            # Guardar en la base
-            self.pago_repo.agregar(pago)
+            repo_pago.agregar(pago)
 
             if estado == "aprobado":
                 reserva.estado = "pagada"
-                self.reserva_repo.actualizar(reserva)
+                repo_reserva.actualizar(reserva)
 
-            # Commit transaccional
-            self.pago_repo.commit()
-            self.reserva_repo.commit()
+            repo_pago.commit()
+            repo_reserva.commit()
 
             return {
                 "mensaje": f"Pago procesado correctamente ({estado}).",
@@ -77,42 +65,64 @@ class PagoService:
             }
 
         except Exception as e:
-            self.pago_repo.rollback()
-            self.reserva_repo.rollback()
+            repo_pago.rollback()
+            repo_reserva.rollback()
             raise e
         finally:
-            self.pago_repo.cerrar()
-            self.reserva_repo.cerrar()
+            repo_pago.cerrar()
+            repo_reserva.cerrar()
 
     # ============================
-    # LISTAR PAGOS
+    # LISTAR / OBTENER
     # ============================
     def listar_pagos(self):
+        repo = PagoRepository()
         try:
-            return self.pago_repo.listar_todos()
+            return repo.listar_todos()
         finally:
-            self.pago_repo.cerrar()
+            repo.cerrar()
 
-    # ============================
-    # OBTENER PAGO POR ID
-    # ============================
     def obtener_pago_por_id(self, id_pago):
+        repo = PagoRepository()
         try:
-            pago = self.pago_repo.obtener_por_id(id_pago)
+            pago = repo.obtener_por_id(id_pago)
             if not pago:
                 raise ValueError("Pago no encontrado.")
             return pago
         finally:
-            self.pago_repo.cerrar()
+            repo.cerrar()
 
-    # ============================
-    # OBTENER PAGO POR RESERVA
-    # ============================
     def obtener_pago_por_reserva(self, id_reserva):
+        repo = PagoRepository()
         try:
-            pago = self.pago_repo.obtener_por_reserva(id_reserva)
+            pago = repo.obtener_por_reserva(id_reserva)
             if not pago:
                 raise ValueError("No se encontró pago asociado a la reserva.")
             return pago
         finally:
-            self.pago_repo.cerrar()
+            repo.cerrar()
+    # ============================
+    # ELIMINAR
+    # ============================
+    def eliminar_pago(self, id_pago):
+        """
+        Elimina un pago solo si no está confirmado o aprobado.
+        """
+        repo = PagoRepository()
+        try:
+            pago = repo.obtener_por_id(id_pago)
+            if not pago:
+                raise ValueError("Pago no encontrado.")
+
+            if pago.estado_transaccion in ("completado", "aprobado"):
+                raise ValueError("No se puede eliminar un pago completado o aprobado.")
+
+            repo.eliminar(id_pago)
+            repo.commit()
+            return {"mensaje": f"Pago {id_pago} eliminado correctamente."}
+        except Exception:
+            repo.rollback()
+            raise
+        finally:
+            repo.cerrar()
+

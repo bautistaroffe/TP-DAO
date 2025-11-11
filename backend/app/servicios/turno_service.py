@@ -6,10 +6,6 @@ from backend.app.repositorios.reserva_repo import ReservaRepository
 
 
 class TurnoService:
-    def __init__(self):
-        self.turno_repo = TurnoRepository()
-        self.cancha_repo = CanchaRepository()
-        self.reserva_repo = ReservaRepository()
 
     # ============================
     # VALIDACIONES
@@ -24,24 +20,29 @@ class TurnoService:
         if hora_inicio >= hora_fin:
             raise ValueError("La hora de inicio debe ser anterior a la hora de fin.")
         # validar que la cancha exista
-        cancha = self.cancha_repo.obtener_por_id(id_cancha)
-        if not cancha:
-            raise ValueError("La cancha especificada no existe.")
+        repo_cancha = CanchaRepository()
+        try:
+            cancha = repo_cancha.obtener_por_id(id_cancha)
+            if not cancha:
+                raise ValueError("La cancha especificada no existe.")
+        finally:
+            repo_cancha.cerrar()
 
     def _turno_disponible(self, id_cancha, fecha, hora_inicio, hora_fin):
-        """
-        Verifica si ya existe un turno en esa cancha que se superponga en horario.
-        """
-        turnos = self.turno_repo.listar_todos()
+        repo_turno = TurnoRepository()
+        try:
+            turnos = repo_turno.listar_todos()
+        finally:
+            repo_turno.cerrar()
+
         for t in turnos:
             if t.id_cancha == id_cancha and t.fecha == fecha:
-                # comparar horas
                 if not (hora_fin <= t.hora_inicio or hora_inicio >= t.hora_fin):
                     return False
         return True
 
     # ============================
-    # CREAR TURNO
+    # CREAR
     # ============================
     def crear_turno(self, id_cancha: int, fecha: date, hora_inicio: time, hora_fin: time, estado="disponible"):
         self._validar_campos(id_cancha, fecha, hora_inicio, hora_fin)
@@ -56,130 +57,132 @@ class TurnoService:
             estado=estado
         )
 
+        repo = TurnoRepository()
         try:
-            self.turno_repo.agregar(turno)
-            self.turno_repo.commit()
+            repo.agregar(turno)
+            repo.commit()
             return turno
         except Exception:
-            self.turno_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.turno_repo.cerrar()
-            self.cancha_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_turnos(self):
+        repo = TurnoRepository()
         try:
-            return self.turno_repo.listar_todos()
+            return repo.listar_todos()
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()
 
     def obtener_turno_por_id(self, id_turno: int):
+        repo = TurnoRepository()
         try:
-            turno = self.turno_repo.obtener_por_id(id_turno)
+            turno = repo.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
             return turno
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()
 
     def listar_turnos_por_cancha(self, id_cancha: int):
+        repo = TurnoRepository()
         try:
-            return [t for t in self.turno_repo.listar_todos() if t.id_cancha == id_cancha]
+            return [t for t in repo.listar_todos() if t.id_cancha == id_cancha]
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # ACTUALIZAR
     # ============================
     def actualizar_turno(self, id_turno, **datos_actualizados):
+        repo = TurnoRepository()
         try:
-            turno = self.turno_repo.obtener_por_id(id_turno)
+            turno = repo.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
 
-            # validar si se cambian horas o fecha
             if "hora_inicio" in datos_actualizados or "hora_fin" in datos_actualizados:
                 hi = datos_actualizados.get("hora_inicio", turno.hora_inicio)
                 hf = datos_actualizados.get("hora_fin", turno.hora_fin)
                 if hi >= hf:
                     raise ValueError("La hora de inicio debe ser anterior a la de fin.")
-            if "fecha" in datos_actualizados:
-                if not datos_actualizados["fecha"]:
-                    raise ValueError("La fecha no puede ser vacía.")
+            if "fecha" in datos_actualizados and not datos_actualizados["fecha"]:
+                raise ValueError("La fecha no puede ser vacía.")
 
-            # aplicar cambios válidos
             for campo, valor in datos_actualizados.items():
                 if hasattr(turno, campo):
                     setattr(turno, campo, valor)
 
-            self.turno_repo.actualizar(turno)
-            self.turno_repo.commit()
+            repo.actualizar(turno)
+            repo.commit()
             return turno
         except Exception:
-            self.turno_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # ELIMINAR
     # ============================
     def eliminar_turno(self, id_turno):
-        """
-        Elimina un turno solo si no está reservado.
-        """
+        repo_turno = TurnoRepository()
+        repo_reserva = ReservaRepository()
         try:
-            turno = self.turno_repo.obtener_por_id(id_turno)
+            turno = repo_turno.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
 
-            reservas = self.reserva_repo.obtener_todos(
+            reservas = repo_reserva.obtener_todos(
                 "SELECT * FROM Reserva WHERE id_turno=? AND estado IN ('pendiente','confirmada')",
                 (id_turno,)
             )
             if reservas:
                 raise ValueError("No se puede eliminar un turno reservado o pendiente.")
 
-            self.turno_repo.eliminar(id_turno)
-            self.turno_repo.commit()
+            repo_turno.eliminar(id_turno)
+            repo_turno.commit()
             return {"mensaje": f"Turno {id_turno} eliminado correctamente."}
         except Exception:
-            self.turno_repo.rollback()
+            repo_turno.rollback()
             raise
         finally:
-            self.turno_repo.cerrar()
-            self.reserva_repo.cerrar()
+            repo_turno.cerrar()
+            repo_reserva.cerrar()
 
     # ============================
     # CAMBIO DE ESTADO
     # ============================
     def marcar_como_reservado(self, id_turno):
+        repo = TurnoRepository()
         try:
-            turno = self.turno_repo.obtener_por_id(id_turno)
+            turno = repo.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
             turno.estado = "reservado"
-            self.turno_repo.marcar_como_reservado(id_turno)
-            self.turno_repo.commit()
+            repo.marcar_como_reservado(id_turno)
+            repo.commit()
         except Exception:
-            self.turno_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()
 
     def marcar_como_disponible(self, id_turno):
+        repo = TurnoRepository()
         try:
-            turno = self.turno_repo.obtener_por_id(id_turno)
+            turno = repo.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
             turno.estado = "disponible"
-            self.turno_repo.marcar_como_disponible(id_turno)
-            self.turno_repo.commit()
+            repo.marcar_como_disponible(id_turno)
+            repo.commit()
         except Exception:
-            self.turno_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.turno_repo.cerrar()
+            repo.cerrar()

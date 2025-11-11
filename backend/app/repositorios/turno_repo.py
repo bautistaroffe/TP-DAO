@@ -16,9 +16,9 @@ class TurnoRepository(BaseRepository):
         filas = self.obtener_todos("SELECT * FROM Turno")
         return [Turno(**f) for f in filas]
 
-    def obtener_por_id(self, tabla, id_columna, id_turno):
+    def obtener_por_id(self, id_turno):
         fila = super().obtener_por_id("Turno", "id_turno", id_turno)
-        return Turno(**fila) if fila else None
+        return Turno(**dict(fila)) if fila else None
 
     def actualizar(self, turno: Turno):
         self.ejecutar("""

@@ -3,9 +3,6 @@ from backend.app.repositorios.adicional_repo import ServicioAdicionalRepository
 
 
 class ServicioAdicionalService:
-    def __init__(self):
-        self.servicio_repo = ServicioAdicionalRepository()
-
     # ============================
     # VALIDACIONES
     # ============================
@@ -37,40 +34,44 @@ class ServicioAdicionalService:
             cant_paletas=cant_paletas
         )
 
+        repo = ServicioAdicionalRepository()
         try:
-            self.servicio_repo.agregar(servicio)
-            self.servicio_repo.commit()
+            repo.agregar(servicio)
+            repo.commit()
             return servicio
         except Exception:
-            self.servicio_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.servicio_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_servicios(self):
+        repo = ServicioAdicionalRepository()
         try:
-            return self.servicio_repo.listar_todos()
+            return repo.listar_todos()
         finally:
-            self.servicio_repo.cerrar()
+            repo.cerrar()
 
     def obtener_servicio_por_id(self, id_servicio):
+        repo = ServicioAdicionalRepository()
         try:
-            servicio = self.servicio_repo.obtener_por_id(id_servicio)
+            servicio = repo.obtener_por_id(id_servicio)
             if not servicio:
                 raise ValueError("Servicio adicional no encontrado.")
             return servicio
         finally:
-            self.servicio_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # ACTUALIZAR
     # ============================
     def actualizar_servicio(self, id_servicio, **datos_actualizados):
+        repo = ServicioAdicionalRepository()
         try:
-            servicio = self.servicio_repo.obtener_por_id(id_servicio)
+            servicio = repo.obtener_por_id(id_servicio)
             if not servicio:
                 raise ValueError("Servicio adicional no encontrado.")
 
@@ -86,33 +87,30 @@ class ServicioAdicionalService:
                 if hasattr(servicio, campo):
                     setattr(servicio, campo, valor)
 
-            self.servicio_repo.actualizar(servicio)
-            self.servicio_repo.commit()
+            repo.actualizar(servicio)
+            repo.commit()
             return servicio
         except Exception:
-            self.servicio_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.servicio_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # ELIMINAR
     # ============================
     def eliminar_servicio(self, id_servicio):
-        """
-        Elimina un servicio adicional si no está asociado a ninguna reserva activa.
-        (La lógica de verificación se maneja en ReservaService antes de llamar a este método)
-        """
+        repo = ServicioAdicionalRepository()
         try:
-            servicio = self.servicio_repo.obtener_por_id(id_servicio)
+            servicio = repo.obtener_por_id(id_servicio)
             if not servicio:
                 raise ValueError("Servicio adicional no encontrado.")
 
-            self.servicio_repo.eliminar(id_servicio)
-            self.servicio_repo.commit()
+            repo.eliminar(id_servicio)
+            repo.commit()
             return {"mensaje": f"Servicio adicional {id_servicio} eliminado correctamente."}
         except Exception:
-            self.servicio_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.servicio_repo.cerrar()
+            repo.cerrar()
