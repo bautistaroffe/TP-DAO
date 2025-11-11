@@ -6,11 +6,6 @@ from backend.app.repositorios.pago_repo import PagoRepository
 
 
 class UsuarioService:
-    def __init__(self):
-        self.usuario_repo = UsuarioRepository()
-        self.reserva_repo = ReservaRepository()
-        self.pago_repo = PagoRepository()
-
     # ============================
     # VALIDACIONES
     # ============================
@@ -41,45 +36,49 @@ class UsuarioService:
             estado=estado
         )
 
+        repo = UsuarioRepository()
         try:
             # verificar duplicado
-            existentes = [u for u in self.usuario_repo.listar_todos() if u.dni == dni]
+            existentes = [u for u in repo.listar_todos() if u.dni == dni]
             if existentes:
                 raise ValueError("Ya existe un usuario con ese DNI.")
 
-            self.usuario_repo.agregar(usuario)
-            self.usuario_repo.commit()
+            repo.agregar(usuario)
+            repo.commit()
             return usuario
         except Exception:
-            self.usuario_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.usuario_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_usuarios(self):
+        repo = UsuarioRepository()
         try:
-            return self.usuario_repo.listar_todos()
+            return repo.listar_todos()
         finally:
-            self.usuario_repo.cerrar()
+            repo.cerrar()
 
     def obtener_usuario_por_id(self, id_usuario):
+        repo = UsuarioRepository()
         try:
-            usuario = self.usuario_repo.obtener_por_id(id_usuario)
+            usuario = repo.obtener_por_id(id_usuario)
             if not usuario:
                 raise ValueError("Usuario no encontrado.")
             return usuario
         finally:
-            self.usuario_repo.cerrar()
+            repo.cerrar()
 
     # ============================
     # ACTUALIZAR USUARIO
     # ============================
     def actualizar_usuario(self, id_usuario, **datos_actualizados):
+        repo = UsuarioRepository()
         try:
-            usuario = self.usuario_repo.obtener_por_id(id_usuario)
+            usuario = repo.obtener_por_id(id_usuario)
             if not usuario:
                 raise ValueError("Usuario no encontrado.")
 
@@ -97,55 +96,58 @@ class UsuarioService:
                 if hasattr(usuario, campo):
                     setattr(usuario, campo, valor)
 
-            self.usuario_repo.actualizar(usuario)
-            self.usuario_repo.commit()
+            repo.actualizar(usuario)
+            repo.commit()
             return usuario
         except Exception:
-            self.usuario_repo.rollback()
+            repo.rollback()
             raise
         finally:
-            self.usuario_repo.cerrar()
+            repo.cerrar()
 
     # ============================
-    # ELIMINAR USUARIO (Opción 1)
+    # ELIMINAR USUARIO (segura)
     # ============================
     def eliminar_usuario(self, id_usuario):
         """
-        Opción 1 — Si el usuario tiene pagos o reservas asociadas:
-            → No se elimina.
-            → Se marca como inactivo y se notifica el motivo.
-        Si no tiene registros → se elimina físicamente.
+        Si el usuario tiene pagos o reservas asociadas:
+            → No se elimina físicamente.
+            → Se marca como inactivo y se informa.
+        Si no tiene registros → se elimina.
         """
+        repo_usuario = UsuarioRepository()
+        repo_reserva = ReservaRepository()
+        repo_pago = PagoRepository()
+
         try:
-            usuario = self.usuario_repo.obtener_por_id(id_usuario)
+            usuario = repo_usuario.obtener_por_id(id_usuario)
             if not usuario:
                 raise ValueError("Usuario no encontrado.")
 
-            reservas = self.reserva_repo.obtener_todos(
+            reservas = repo_reserva.obtener_todos(
                 "SELECT * FROM Reserva WHERE id_cliente=?", (id_usuario,)
             )
-            pagos = self.pago_repo.obtener_todos(
+            pagos = repo_pago.obtener_todos(
                 "SELECT * FROM Pago WHERE id_usuario=?", (id_usuario,)
             )
 
             if reservas or pagos:
                 usuario.estado = "inactivo"
-                self.usuario_repo.actualizar(usuario)
-                self.usuario_repo.commit()
+                repo_usuario.actualizar(usuario)
+                repo_usuario.commit()
                 return {
                     "mensaje": f"Usuario {id_usuario} marcado como inactivo: tenía reservas o pagos asociados.",
                     "usuario": usuario.__dict__
                 }
 
-            # Eliminación física si no tiene relaciones
-            self.usuario_repo.eliminar(id_usuario)
-            self.usuario_repo.commit()
+            repo_usuario.eliminar(id_usuario)
+            repo_usuario.commit()
             return {"mensaje": f"Usuario {id_usuario} eliminado correctamente."}
 
         except Exception:
-            self.usuario_repo.rollback()
+            repo_usuario.rollback()
             raise
         finally:
-            self.usuario_repo.cerrar()
-            self.reserva_repo.cerrar()
-            self.pago_repo.cerrar()
+            repo_usuario.cerrar()
+            repo_reserva.cerrar()
+            repo_pago.cerrar()
