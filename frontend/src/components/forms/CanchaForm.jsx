@@ -1,269 +1,200 @@
-// src/components/CanchaForm.jsx
+// src/components/forms/CanchaForm.jsx
 
 import React, { useState, useEffect } from 'react';
+import { canchaService } from '../../services/canchaService.js';
 
-// --- CONFIGURACIÓN DE REGLAS Y OPCIONES ---
-const TIPOS_CANCHA = ['Fútbol', 'Pádel', 'Básquet'];
-const MAX_NOMBRE_LENGTH = 25;
+// --- Definiciones de Reglas de Negocio ---
+const CanchaTable = ({ onEditStart }) => {
+    const [canchas, setCanchas] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [confirmId, setConfirmId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-// Nuevas constantes para selectores
-const BOOLEAN_OPTIONS = ['SI', 'NO'];
-const ESTADO_OPTIONS = ['Activa', 'Inactiva'];
+    // Lógica de carga de datos
+    useEffect(() => {
+        const fetchCanchas = async () => {
+            try {
+                const data = await canchaService.obtenerCanchas();
+                console.log("✅ Canchas recibidas:", data);
+                console.log("🔑 Claves del primer objeto:", Object.keys(data[0]))
+                setCanchas(data);
+                setError(null);
+            } catch (err) {
+                setError("Error al cargar la lista de canchas. Revisa la conexión con el Backend.");
+                console.error("Detalle del error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCanchas();
+    }, []);
 
-const OPCIONES_POR_TIPO = {
-    'Fútbol': {
-        superficies: ['Sintético', 'Cemento'],
-        tamaños: ['7', '5'],
-        requiereTamaño: true,
-    },
-    'Pádel': {
-        superficies: ['Sintético', 'Cemento'],
-        tamaños: [],
-        requiereTamaño: false,
-    },
-    'Básquet': {
-        superficies: ['Cemento', 'Madera'],
-        tamaños: ['3', '5'],
-        requiereTamaño: true,
-    },
-};
+    // ---------------------------------
+    // Lógica de Acciones
+    // ---------------------------------
 
-export default function CanchaForm({ initialData = null, onSubmit, onClose }) {
-  const [formData, setFormData] = useState({
-    nombre: '',
-    tipo: TIPOS_CANCHA[0],
-    superficie: '',
-    tamaño: '',
-    // Valores iniciales como string para selectores SI/NO
-    techada: 'NO',
-    iluminacion: 'NO',
-    estado: ESTADO_OPTIONS[0], // 'Activa'
-    precio_base: 0,
-  });
-  const [errors, setErrors] = useState({});
-
-  const isEditing = !!initialData && !!initialData.id_cancha;
-  const currentOptions = OPCIONES_POR_TIPO[formData.tipo] || {};
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        nombre: initialData.nombre || '',
-        tipo: initialData.tipo || TIPOS_CANCHA[0],
-        superficie: initialData.superficie || '',
-        tamaño: initialData.tamaño || '',
-        // Conversión de BOOLEAN (backend) a STRING (formulario)
-        techada: initialData.techada ? 'SI' : 'NO',
-        iluminacion: initialData.iluminacion ? 'SI' : 'NO',
-        estado: ESTADO_OPTIONS.includes(initialData.estado) ? initialData.estado : ESTADO_OPTIONS[0],
-        precio_base: initialData.precio_base || 0,
-      });
-    }
-  }, [initialData]);
-
-  // --- Manejadores de Estado ---
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    // Lógica para resetear campos condicionales al cambiar el tipo
-    if (name === 'tipo') {
-        const newOptions = OPCIONES_POR_TIPO[value];
-        setFormData(prev => ({
-            ...prev,
-            [name]: value,
-            superficie: newOptions.superficies.includes(prev.superficie) ? prev.superficie : '',
-            tamaño: newOptions.requiereTamaño ? '' : 'N/A'
-        }));
-    } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
-    }
-
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  // --- Lógica de Validación ---
-
-  const validate = () => {
-    let newErrors = {};
-
-    // 1. Nombre y Precio (validaciones base)
-    if (!formData.nombre.trim()) {
-        newErrors.nombre = 'El nombre es obligatorio.';
-    } else if (formData.nombre.length > MAX_NOMBRE_LENGTH) {
-        newErrors.nombre = `El nombre no puede exceder los ${MAX_NOMBRE_LENGTH} caracteres.`;
-    }
-    if (formData.precio_base <= 0) newErrors.precio_base = 'El precio base debe ser mayor a 0.';
-
-    // 2. Superficie y Tamaño (Validación condicional)
-    if (!formData.superficie || !currentOptions.superficies.includes(formData.superficie)) {
-        newErrors.superficie = 'Debe seleccionar una superficie válida.';
-    }
-    if (currentOptions.requiereTamaño) {
-        if (!formData.tamaño || !currentOptions.tamaños.includes(formData.tamaño)) {
-            newErrors.tamaño = 'Debe seleccionar un tamaño válido.';
+    const handleModificar = (id_cancha) => {
+        console.log(`[ACCIÓN] Modificar Cancha ID: ${id_cancha}`);
+        // Llama al callback de la página padre para iniciar la edición.
+        if (onEditStart) {
+            onEditStart(id_cancha);
         }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // --- Manejo del Envío y Conversión Final ---
-    const normalizeString = (str) => {
-        if (!str) return str;
-        // Convierte a minúsculas y elimina el acento de 'ó' si existiera (ej. Fútbol -> Futbol)
-        return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     };
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validate()) {
-      // 1. Conversión de string 'SI'/'NO' a booleanos para el DTO
-      // 2. Ajuste del campo tamaño (null si no es requerido)
-      const dataToSend = {
-          ...formData,
-          tamaño: currentOptions.requiereTamaño ? formData.tamaño : null,
-          techada: formData.techada === 'SI', // Conversión clave para el backend
-          iluminacion: formData.iluminacion === 'SI', // Conversión clave para el backend
-          tipo: normalizeString(formData.tipo),
-          estado: normalizeString(formData.estado),
 
-          // También normaliza superficie si tu backend lo exige
-          superficie: normalizeString(formData.superficie),
-      };
+    // Abre la UI de confirmación
+    const handleEliminar = (id_cancha) => {
+        setConfirmId(id_cancha);
+    };
 
-      onSubmit({
-        ...dataToSend,
-        ...(isEditing && { id_cancha: initialData.id_cancha })
-      });
-    }
-  };
+    // Confirma y ejecuta la eliminación
+    const confirmDeletion = async () => {
+        if (!confirmId) return;
 
-  // --- Renderizado ---
+        setIsDeleting(true);
+        try {
+            await canchaService.eliminarCancha(confirmId);
 
-  return (
-    <div className="app-form-container">
-      <h3>{isEditing ? `Modificar Cancha ID: ${initialData.id_cancha}` : 'Agregar Nueva Cancha'}</h3>
+            // Actualiza la lista en el estado local
+            setCanchas(canchas.filter(c => c.id_cancha !== confirmId));
 
-      <form onSubmit={handleSubmit}>
+            console.log(`Cancha ID ${confirmId} eliminada con éxito.`);
 
-        {/* FILA 1: Nombre y Tipo */}
-        <div className="form-group-row">
-            <div className="form-field">
-              <label htmlFor="nombre">Nombre/Descripción:</label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                maxLength={MAX_NOMBRE_LENGTH}
-              />
-              <small>{formData.nombre.length}/{MAX_NOMBRE_LENGTH}</small>
-              {errors.nombre && <p className="error">{errors.nombre}</p>}
-            </div>
-            <div className="form-field">
-              <label htmlFor="tipo">Tipo de Cancha:</label>
-              <select id="tipo" name="tipo" value={formData.tipo} onChange={handleChange}>
-                {TIPOS_CANCHA.map(tipo => (
-                    <option key={tipo} value={tipo}>
-                        {tipo}
-                    </option>
-                ))}
-              </select>
-              {errors.tipo && <p className="error">{errors.tipo}</p>}
-            </div>
-        </div>
+        } catch (error) {
+            setError(`Error al eliminar la cancha: ${error.message}`);
+            console.error(error);
+        } finally {
+            setConfirmId(null);
+            setIsDeleting(false);
+        }
+    };
 
-        {/* FILA 2: Superficie y Tamaño (Dinámicos) */}
-        <div className="form-group-row">
+    // Cancela la eliminación
+    const cancelDeletion = () => {
+        setConfirmId(null);
+    };
 
-            <div className="form-field">
-              <label htmlFor="superficie">Superficie:</label>
-              <select id="superficie" name="superficie" value={formData.superficie} onChange={handleChange}>
-                <option value="" disabled>Seleccionar superficie</option>
-                {currentOptions.superficies && currentOptions.superficies.map(sup => (
-                    <option key={sup} value={sup}>{sup}</option>
-                ))}
-              </select>
-              {errors.superficie && <p className="error">{errors.superficie}</p>}
-            </div>
+    const canchaToDelete = canchas.find(c => c.id_cancha === confirmId);
 
-            {currentOptions.requiereTamaño && (
-                <div className="form-field">
-                    <label htmlFor="tamaño">Tamaño:</label>
-                    <select id="tamaño" name="tamaño" value={formData.tamaño} onChange={handleChange}>
-                        <option value="" disabled>Seleccionar tamaño</option>
-                        {currentOptions.tamaños && currentOptions.tamaños.map(tam => (
-                            <option key={tam} value={tam}>{tam}</option>
+    // ---------------------------------
+    // Componente de Fila
+    // ---------------------------------
+    const CanchaRow = ({ cancha }) => {
+        const estadoClase = cancha.estado === 'disponible'
+            ? 'text-green-600 font-semibold'
+            : 'text-red-600 font-semibold';
+
+        const techadaIcono = cancha.techada ? '✅' : '❌';
+        const iluminacionIcono = cancha.iluminacion ? '💡' : '🌑';
+
+        return (
+            <tr className="border-b transition duration-150 ease-in-out hover:bg-indigo-50/20">
+
+                {/* Datos de la Cancha */}
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">{cancha.id_cancha}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">{cancha.nombre}</td>
+                <td className="px-4 py-3 text-sm font-medium text-blue-600">{cancha.tipo.toUpperCase()}</td>
+                <td className="px-4 py-3 text-sm text-gray-500">{cancha.superficie || 'N/A'}</td>
+
+                {/* 🟢 NUEVA CELDA: Tamaño */}
+                <td className="px-4 py-3 text-sm text-gray-700">{cancha["tamaño"] || 'No aplica'}</td>
+
+                <td className="px-4 py-3 text-sm font-bold text-indigo-700">${cancha.precio_base.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm text-center">{techadaIcono}</td>
+                <td className="px-4 py-3 text-sm text-center">{iluminacionIcono}</td>
+                <td className={`px-4 py-3 text-sm ${estadoClase}`}>{cancha.estado.toUpperCase()}</td>
+
+                {/* Columna de Acciones */}
+                <td className="px-4 py-3 text-sm space-x-2">
+                    <button
+                        onClick={() => handleModificar(cancha.id_cancha)}
+                        className="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-600 px-3 py-1 rounded-full text-xs font-semibold transition duration-200"
+                    >
+                        Modificar
+                    </button>
+                    <button
+                        onClick={() => handleEliminar(cancha.id_cancha)}
+                        className="text-red-600 hover:text-white hover:bg-red-600 border border-red-600 px-3 py-1 rounded-full text-xs font-semibold transition duration-200"
+                        disabled={isDeleting}
+                    >
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+        );
+    };
+
+    // ---------------------------------
+    // Renderizado (Loading, Error, Tabla)
+    // ---------------------------------
+
+    // Mensajes de estado
+    if (loading) return <div className="p-4 text-center text-xl text-indigo-500 animate-pulse">Cargando canchas...</div>;
+    if (error) return <div className="p-4 text-center text-red-600 bg-red-100 border border-red-400 rounded-lg mx-auto max-w-lg">{error}</div>;
+    if (canchas.length === 0) return <div className="p-4 text-center text-gray-500">No hay canchas registradas para mostrar.</div>;
+
+    return (
+        <div className="relative">
+             <div className="overflow-x-auto shadow-2xl rounded-xl">
+                <table className="min-w-full divide-y divide-gray-200">
+
+                    {/* Encabezado */}
+                    <thead className="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nombre</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipo</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Superficie</th>
+
+                            {/* 🟢 NUEVO ENCABEZADO: Tamaño */}
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">"Tamaño"</th>
+
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Precio/h</th>
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Techada</th>
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Iluminación</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Estado</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    {/* Cuerpo de la Tabla */}
+                    <tbody className="bg-white divide-y divide-gray-100">
+                        {canchas.map(cancha => (
+                            <CanchaRow key={cancha.id_cancha} cancha={cancha} />
                         ))}
-                    </select>
-                    {errors.tamaño && <p className="error">{errors.tamaño}</p>}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modal de Confirmación */}
+            {confirmId && canchaToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-md">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Confirmar Eliminación</h3>
+                        <p className="text-gray-600 mb-6">
+                            ¿Estás seguro de que deseas eliminar la cancha: <span className="font-bold text-red-500">{canchaToDelete.nombre} (ID: {confirmId})</span>? Esta acción es irreversible.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={cancelDeletion}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150"
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDeletion}
+                                className={`px-4 py-2 rounded-lg text-white font-semibold transition duration-150 ${isDeleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Confirmar Eliminación'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
-
-            {!currentOptions.requiereTamaño && <div className="form-field"></div>}
         </div>
+    );
+};
 
-        {/* FILA 3: Techada e Iluminación (Nuevos Selectores) */}
-        <div className="form-group-row">
-            <div className="form-field">
-                <label htmlFor="techada">Techada:</label>
-                <select id="techada" name="techada" value={formData.techada} onChange={handleChange}>
-                    {BOOLEAN_OPTIONS.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                </select>
-            </div>
-            <div className="form-field">
-                <label htmlFor="iluminacion">Iluminación:</label>
-                <select id="iluminacion" name="iluminacion" value={formData.iluminacion} onChange={handleChange}>
-                    {BOOLEAN_OPTIONS.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                </select>
-            </div>
-        </div>
-
-
-        {/* FILA 4: Precio Base y Estado (Adaptados) */}
-        <div className="form-group-row">
-            <div className="form-field">
-              <label htmlFor="precio_base">Precio Base por Turno (en $):</label>
-              <input
-                type="number"
-                id="precio_base"
-                name="precio_base"
-                value={formData.precio_base}
-                onChange={handleChange}
-                min="0.01"
-                step="0.01"
-              />
-              {errors.precio_base && <p className="error">{errors.precio_base}</p>}
-            </div>
-            <div className="form-field">
-              <label htmlFor="estado">Estado:</label>
-              <select id="estado" name="estado" value={formData.estado} onChange={handleChange}>
-                {ESTADO_OPTIONS.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-        </div>
-
-        {/* Botones de Acción */}
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {isEditing ? 'Guardar Cambios' : 'Registrar Cancha'}
-          </button>
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            Cancelar
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
+export default CanchaTable;
