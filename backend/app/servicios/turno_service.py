@@ -1,5 +1,6 @@
 from datetime import date, time
 from backend.app.dominio.turno import Turno
+from backend.app.dto.turno_dto import TurnoDTO
 from backend.app.repositorios.turno_repo import TurnoRepository
 from backend.app.repositorios.cancha_repo import CanchaRepository
 from backend.app.repositorios.reserva_repo import ReservaRepository
@@ -71,10 +72,18 @@ class TurnoService:
     # ============================
     # OBTENER / LISTAR
     # ============================
-    def listar_turnos(self):
+    def listar_turnos(self) -> list[TurnoDTO]:
         repo = TurnoRepository()
         try:
-            return repo.listar_todos()
+            # 1. Obtiene las entidades del repositorio
+            turnos: list[Turno] = repo.listar_todos()
+
+            # 2. Mapea cada entidad a un DTO
+            turnos_dto: list[TurnoDTO] = [
+                self._mapear_a_dto(turno)
+                for turno in turnos if turno
+            ]
+            return turnos_dto
         finally:
             repo.cerrar()
 
@@ -186,3 +195,16 @@ class TurnoService:
             raise
         finally:
             repo.cerrar()
+
+    def _mapear_a_dto(self, turno:Turno) -> TurnoDTO:
+        data = {
+            "id_turno": turno.id_turno,
+            "id_cancha": turno.id_cancha,
+            "fecha": turno.fecha,
+            "hora_inicio": turno.hora_inicio,
+            "hora_fin": turno.hora_fin,
+            "estado": turno.estado
+        }
+
+
+        return TurnoDTO(**data)

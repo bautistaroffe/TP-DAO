@@ -1,4 +1,5 @@
 from backend.app.dominio.reserva import Reserva
+from backend.app.dto.reserva_dto import ReservaDTO
 from backend.app.repositorios.reserva_repo import ReservaRepository
 from backend.app.repositorios.cancha_repo import CanchaRepository
 from backend.app.repositorios.adicional_repo import ServicioAdicionalRepository
@@ -91,13 +92,15 @@ class ReservaService:
     # ============================
     # OBTENER / LISTAR
     # ============================
-    def listar_reservas(self):
-        """
-        Devuelve todas las reservas registradas en el sistema.
-        """
+    def listar_reservas(self) -> list[ReservaDTO]:
         repo = ReservaRepository()
         try:
-            return repo.obtener_todos("SELECT * FROM Reserva")
+            reservas: list[Reserva] = repo.listar_todas()
+            reservas_dto: list[ReservaDTO] = [
+                self._mapear_a_dto(reserva)
+                for reserva in reservas if reserva
+            ]
+            return reservas_dto
         finally:
             repo.cerrar()
 
@@ -214,3 +217,18 @@ class ReservaService:
             repo_cancha.cerrar()
             repo_servicio.cerrar()
             repo_pago.cerrar()
+
+    def _mapear_a_dto(self, reserva: Reserva) -> ReservaDTO:
+        data = {
+            "id_reserva": reserva.id_reserva,
+            "id_cancha": reserva.id_cancha,
+            "id_turno": reserva.id_turno,
+            "id_cliente": reserva.id_cliente,
+            "id_torneo": reserva.id_torneo,
+            "id_servicio": reserva.id_servicio,
+            "precio_total": reserva.precio_total,
+            "estado": reserva.estado,
+            "origen": reserva.origen
+        }
+
+        return ReservaDTO(**data)

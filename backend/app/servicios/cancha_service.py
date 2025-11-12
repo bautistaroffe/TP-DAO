@@ -3,6 +3,8 @@ from backend.app.dominio.cancha_basquet import CanchaBasquet
 from backend.app.dominio.cancha_padel import CanchaPadel
 from backend.app.repositorios.cancha_repo import CanchaRepository
 from backend.app.repositorios.reserva_repo import ReservaRepository
+from backend.app.dto.cancha_dto import CanchaDTO
+from backend.app.dominio.cancha import Cancha
 
 
 class CanchaService:
@@ -134,3 +136,22 @@ class CanchaService:
         finally:
             repo_cancha.cerrar()
             repo_reserva.cerrar()
+
+    def _mapear_a_dto(self, cancha:Cancha) -> CanchaDTO:
+        data = {
+            "id_cancha": cancha.id_cancha,
+            "nombre": cancha.nombre,
+            "tipo": cancha.tipo,
+            "estado": cancha.estado,
+            "precio_base": cancha.precio_base,
+            "techada": cancha.techada,
+            "iluminacion": cancha.iluminacion
+        }
+
+        data["superficie"] = getattr(cancha, "superficie", None)
+
+        data["tamaño"] = getattr(cancha, "tamaño", None)
+
+        return CanchaDTO(**data)
+
+

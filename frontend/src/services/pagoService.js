@@ -1,9 +1,9 @@
-const API_BASE_URL = "http://localhost:8000/api/canchas";
+const API_BASE_URL = "http://localhost:8000/api/pagos";
 
-export const canchaService = {
-    
-  async obtenerCanchas() {
-    console.log(`Intentando obtener canchas desde: ${API_BASE_URL}`);
+export const pagoService = {
+
+  async obtenerPagos() {
+    console.log(`Intentando obtener pagos desde: ${API_BASE_URL}`);
 
     try {
       // 1. Realizar la solicitud HTTP GET
@@ -17,30 +17,29 @@ export const canchaService = {
       }
 
       // 3. Convertir la respuesta a JSON
-      const canchas = await response.json();
+      const pagos = await response.json();
 
       // 4. Devolver los datos (los DTOs)
-      return canchas;
+      return pagos;
 
     } catch (error) {
-      console.error("Fallo al obtener la lista de canchas:", error);
+      console.error("Fallo al obtener la lista de pagos:", error);
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
   },
-  async eliminarCancha(id_cancha) {
-    console.log(`[SERVICE] Llamando a DELETE para Cancha ID: ${id_cancha}`);
+  async eliminarPago(id_pago) {
+    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_pago}`);
 
-    const response = await fetch(`${API_BASE_URL}/${id_cancha}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/${id_pago}`, { method: 'DELETE' });
 
     if (!response.ok) {
         const errorDetail = await response.text();
-        throw new Error(`Error al eliminar la cancha: ${response.status} ${response.statusText} - ${errorDetail}`);
+        throw new Error(`Error al eliminar el pago: ${response.status} ${response.statusText} - ${errorDetail}`);
     }
 
     return true; // Éxito en la eliminación
   }
 
-
-  // Aquí podrías agregar más métodos como obtenerCanchaPorId, crearCancha, etc.
+  // Aquí podrías agregar más métodos.
 };

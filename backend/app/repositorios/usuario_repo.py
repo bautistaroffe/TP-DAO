@@ -18,7 +18,7 @@ class UsuarioRepository(BaseRepository):
 
     def obtener_por_id(self, id_usuario):
         fila = super().obtener_por_id("Usuario", "id_usuario", id_usuario)
-        return Usuario(**fila) if fila else None
+        return Usuario(**dict(fila)) if fila else None
 
     def actualizar(self, usuario: Usuario):
         self.ejecutar("""

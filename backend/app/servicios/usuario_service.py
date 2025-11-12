@@ -1,8 +1,10 @@
 import re
+
 from backend.app.dominio.usuario import Usuario
 from backend.app.repositorios.usuario_repo import UsuarioRepository
 from backend.app.repositorios.reserva_repo import ReservaRepository
 from backend.app.repositorios.pago_repo import PagoRepository
+from backend.app.dto.usuario_dto import UsuarioDTO
 
 
 class UsuarioService:
@@ -55,10 +57,16 @@ class UsuarioService:
     # ============================
     # OBTENER / LISTAR
     # ============================
-    def listar_usuarios(self):
+    def listar_usuarios(self) -> list[UsuarioDTO]:
         repo = UsuarioRepository()
         try:
-            return repo.listar_todos()
+            usuarios: list[Usuario] = repo.listar_todos()
+
+            usuarios_dto: list[UsuarioDTO] = [
+                self._mapear_a_dto(usuario)
+                for usuario in usuarios if usuario
+            ]
+            return usuarios_dto
         finally:
             repo.cerrar()
 
@@ -151,3 +159,16 @@ class UsuarioService:
             repo_usuario.cerrar()
             repo_reserva.cerrar()
             repo_pago.cerrar()
+
+    def _mapear_a_dto(self, usuario: Usuario) -> UsuarioDTO:
+        data = {
+            "id_usuario": usuario.id_usuario,
+            "dni": usuario.dni,
+            "nombre": usuario.nombre,
+            "apellido": usuario.apellido,
+            "telefono": usuario.telefono,
+            "email": usuario.email,
+            "estado": usuario.estado
+        }
+
+        return UsuarioDTO(**data)

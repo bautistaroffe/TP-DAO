@@ -140,7 +140,7 @@ def cargar_datos_prueba():
         precio_total = precio_base + (random.randint(1000, 5000) if id_servicio else 0)
 
         estado = random.choice(['pendiente', 'confirmada', 'confirmada', 'confirmada'])  # Más confirmadas
-        origen = random.choice(['online', 'online', 'presencial'])  # Más online
+        origen = random.choice(['torneo', 'particular', 'particular'])  # Más online
 
         reservas_data.append((id_cancha, id_turno, id_cliente, id_torneo, id_servicio, precio_total, estado, origen))
 

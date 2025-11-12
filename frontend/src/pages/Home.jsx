@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 // 1. Importa el formulario que creamos anteriormente
-import ReservaForm from '../components/forms/ReservaForm';
 
 // Conviértelo a un componente de función para usar Hooks (useState)
 export default function HomePage() {
@@ -11,23 +10,10 @@ export default function HomePage() {
     setShowReservaForm(true);
   };
 
-  const handleCloseForm = () => {
-    setShowReservaForm(false);
-  };
 
   return (
     <div className="container home-page">
-      
-      {/* 3. Renderizado Condicional del Formulario (Modal) */}
-      {showReservaForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <ReservaForm 
-              onClose={handleCloseForm} 
-            />
-          </div>
-        </div>
-      )}
+
 
       <section className="hero">
         <h1>Bienvenido al Panel de Administración de Estadia </h1>
