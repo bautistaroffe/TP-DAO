@@ -41,6 +41,7 @@ class CanchaRepository(BaseRepository):
             ),
         )
         cancha.id_cancha = self.cursor.lastrowid
+        cancha.tipo = tipo
         return cancha
 
     # ----------------------------------------

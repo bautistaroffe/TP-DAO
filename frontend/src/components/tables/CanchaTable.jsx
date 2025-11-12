@@ -31,8 +31,10 @@ const CanchaTable = () => {
     // Lógica de Acciones
     // ---------------------------------
 
+    // NOTE: Se asume que onEditStart se pasó como prop a CanchaTable.
     const handleModificar = (id_cancha) => {
         console.log(`[ACCIÓN] Modificar Cancha ID: ${id_cancha}`);
+        // if (onEditStart) onEditStart(id_cancha); // Descomentar al usar la página completa
     };
 
     // Abre la UI de confirmación
@@ -46,6 +48,7 @@ const CanchaTable = () => {
 
         setIsDeleting(true);
         try {
+            // Nota: Aquí se usa el manejo de errores detallado que implementamos
             await canchaService.eliminarCancha(confirmId);
 
             // Actualiza la lista en el estado local
@@ -54,7 +57,7 @@ const CanchaTable = () => {
             console.log(`Cancha ID ${confirmId} eliminada con éxito.`);
 
         } catch (error) {
-            setError(`Error al eliminar la cancha ${confirmId}.`);
+            setError(`Error al eliminar la cancha: ${error.message}`);
             console.error(error);
         } finally {
             setConfirmId(null);
@@ -80,6 +83,11 @@ const CanchaTable = () => {
         const techadaIcono = cancha.techada ? '✅' : '❌';
         const iluminacionIcono = cancha.iluminacion ? '💡' : '🌑';
 
+        // Lógica de visualización de campos opcionales
+        const superficieDisplay = cancha.superficie || (cancha.tipo !== 'futbol' && cancha.tipo !== 'padel' ? 'N/A' : '---');
+        const tamañoDisplay = cancha.tamaño || (cancha.tipo === 'padel' ? 'N/A' : '---');
+
+
         return (
             <tr className="border-b transition duration-150 ease-in-out hover:bg-indigo-50/20">
 
@@ -87,7 +95,13 @@ const CanchaTable = () => {
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{cancha.id_cancha}</td>
                 <td className="px-4 py-3 text-sm text-gray-700">{cancha.nombre}</td>
                 <td className="px-4 py-3 text-sm font-medium text-blue-600">{cancha.tipo.toUpperCase()}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{cancha.superficie || 'N/A'}</td>
+
+                {/* 🟢 Superficie (Debe aparecer para Básquet si tiene valor) */}
+                <td className="px-4 py-3 text-sm text-gray-500">{cancha.superficie || '---'}</td>
+
+                {/* Tamaño */}
+                <td className="px-4 py-3 text-sm text-gray-500">{cancha.tamaño || '---'}</td>
+
                 <td className="px-4 py-3 text-sm font-bold text-indigo-700">${cancha.precio_base.toFixed(2)}</td>
                 <td className="px-4 py-3 text-sm text-center">{techadaIcono}</td>
                 <td className="px-4 py-3 text-sm text-center">{iluminacionIcono}</td>
@@ -134,6 +148,7 @@ const CanchaTable = () => {
                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nombre</th>
                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipo</th>
                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Superficie</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tamaño</th>
                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Precio/h</th>
                             <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Techada</th>
                             <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Iluminación</th>

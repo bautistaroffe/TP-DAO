@@ -11,7 +11,9 @@ class Cancha(ABC):
         precio_base=0.0,
         techada=False,
         iluminacion=False,
-        reservas=None
+        reservas=None,
+        tamaño=None,
+        superficie=None
     ):
         self.id_cancha = id_cancha
         self.nombre = nombre
@@ -20,6 +22,8 @@ class Cancha(ABC):
         self.precio_base = precio_base
         self.techada = techada
         self.iluminacion = iluminacion
+        self.tamaño = tamaño
+        self.superficie = superficie
         self.reservas = reservas if reservas is not None else []
 
     # --------------------------------

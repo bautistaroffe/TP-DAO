@@ -47,7 +47,7 @@ class CanchaService:
         try:
             repo.agregar(cancha)
             repo.commit()
-            return cancha
+            return self._mapear_a_dto(cancha)
         except Exception:
             repo.rollback()
             raise
@@ -70,7 +70,7 @@ class CanchaService:
             cancha = repo.obtener_por_id(id_cancha)
             if not cancha:
                 raise ValueError("Cancha no encontrada.")
-            return cancha
+            return self._mapear_a_dto(cancha)
         finally:
             repo.cerrar()
 
@@ -100,7 +100,7 @@ class CanchaService:
 
             repo.actualizar(cancha)
             repo.commit()
-            return cancha
+            return self._mapear_a_dto(cancha)
         except Exception:
             repo.rollback()
             raise
@@ -138,19 +138,9 @@ class CanchaService:
             repo_reserva.cerrar()
 
     def _mapear_a_dto(self, cancha:Cancha) -> CanchaDTO:
-        data = {
-            "id_cancha": cancha.id_cancha,
-            "nombre": cancha.nombre,
-            "tipo": cancha.tipo,
-            "estado": cancha.estado,
-            "precio_base": cancha.precio_base,
-            "techada": cancha.techada,
-            "iluminacion": cancha.iluminacion
-        }
-
-        data["superficie"] = getattr(cancha, "superficie", None)
-
-        data["tamaño"] = getattr(cancha, "tamaño", None)
+        data = {"id_cancha": cancha.id_cancha, "nombre": cancha.nombre, "tipo": cancha.tipo, "estado": cancha.estado,
+                "precio_base": cancha.precio_base, "techada": cancha.techada, "iluminacion": cancha.iluminacion,
+                "superficie": getattr(cancha, "superficie", None), "tamaño": getattr(cancha, "tamaño", None)}
 
         return CanchaDTO(**data)
 
