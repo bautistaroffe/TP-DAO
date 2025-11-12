@@ -40,7 +40,7 @@ def crear_torneo(dto: TorneoDTO):
 # GET /torneos/
 # ============================
 @router.get("/", response_model=List[TorneoDTO], summary="Listar todos los torneos")
-def listar_torneos():
+def listar_todos():
     try:
         torneos = service.listar_todos()
         return [

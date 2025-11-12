@@ -1,6 +1,8 @@
 from datetime import date
 from backend.app.dominio.torneo import Torneo
 from backend.app.dominio.reserva import Reserva
+from backend.app.dto.torneo_dto import TorneoDTO
+from backend.app.dto.turno_dto import TurnoDTO
 from backend.app.repositorios.torneo_repo import TorneoRepository
 from backend.app.repositorios.reserva_repo import ReservaRepository
 from backend.app.repositorios.turno_repo import TurnoRepository
@@ -49,10 +51,15 @@ class TorneoService:
         finally:
             repo.cerrar()
 
-    def listar_todos(self):
+    def listar_todos(self) -> list[TorneoDTO]:
         repo = TorneoRepository()
         try:
-            return repo.listar_todos()
+            torneos: list[Torneo] = repo.listar_todos()
+            torneos_dto: list[TorneoDTO] = [
+                self._mapear_a_dto(torneo)
+                for torneo in torneos if torneo
+            ]
+            return torneos_dto
         finally:
             repo.cerrar()
 
@@ -268,3 +275,16 @@ class TorneoService:
             repo_turno.cerrar()
             repo_cancha.cerrar()
             repo_servicio.cerrar()
+
+    def _mapear_a_dto(self, torneo:Torneo) -> TorneoDTO:
+        data = {
+            "id_torneo": torneo.id_torneo,
+            "nombre": torneo.nombre,
+            "categoria": torneo.categoria,
+            "fecha_inicio": torneo.fecha_inicio,
+            "fecha_fin": torneo.fecha_fin,
+            "estado": torneo.estado
+        }
+
+
+        return TorneoDTO(**data)

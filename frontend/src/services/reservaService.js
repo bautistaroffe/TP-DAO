@@ -1,35 +1,33 @@
-// src/services/reservaService.js
-const API_URL = "http://localhost:8000/api/reservas";
+const API_BASE_URL = "http://localhost:8000/api/reservas";
 
-export async function crearReserva(datos) {
-  const response = await fetch(`${API_URL}/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(datos),
-  });
+export const reservaService = {
 
-  // 👇 CLAVE: Si la respuesta no es OK, intentamos leer el mensaje de error del cuerpo
-  if (!response.ok) {
-    let errorMessage = "Error desconocido al crear la reserva.";
+  async obtenerReservas() {
+    console.log(`Intentando obtener reservas desde: ${API_BASE_URL}`);
+
     try {
-      // Intentamos parsear el JSON para ver si el backend envió un cuerpo de error
-      const errorBody = await response.json();
-      // Asumiendo que tu API devuelve el mensaje de error en un campo 'detalle' o 'mensaje'
-      // Ajusta 'detail' o 'mensaje' según cómo tu backend formatea el error
-      errorMessage = errorBody.detail || errorBody.mensaje || errorBody.error || `Error del servidor (${response.status}).`;
-    } catch (e) {
-      // Si falla la lectura del cuerpo, usamos el estado HTTP
-      errorMessage = `Error ${response.status}: ${response.statusText}`;
-    }
+      // 1. Realizar la solicitud HTTP GET
+      const response = await fetch(API_BASE_URL);
 
-    // Lanzamos el error con el mensaje detallado para que el formulario lo muestre
-    throw new Error(errorMessage);
+      // 2. Verificar el estado de la respuesta
+      if (!response.ok) {
+        // Si el estado es 4xx o 5xx, lanzamos un error con más detalle
+        const errorDetail = await response.text(); // Intentamos obtener el cuerpo del error
+        throw new Error(`Error en el servidor (${response.status} ${response.statusText}): ${errorDetail}`);
+      }
+
+      // 3. Convertir la respuesta a JSON
+      const reservas = await response.json();
+
+      // 4. Devolver los datos (los DTOs)
+      return reservas;
+
+    } catch (error) {
+      console.error("Fallo al obtener la lista de reservas:", error);
+      // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
+      throw error;
+    }
   }
 
-  return response.json();
-}
-
-export async function listarReservas() {
-  const response = await fetch(`${API_URL}/`);
-  return response.json();
-}
+  // Aquí podrías agregar más métodos.
+};
