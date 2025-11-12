@@ -27,7 +27,20 @@ export const canchaService = {
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
+  },
+  async eliminarCancha(id_cancha) {
+    console.log(`[SERVICE] Llamando a DELETE para Cancha ID: ${id_cancha}`);
+
+    const response = await fetch(`${API_BASE_URL}/${id_cancha}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+        const errorDetail = await response.text();
+        throw new Error(`Error al eliminar la cancha: ${response.status} ${response.statusText} - ${errorDetail}`);
+    }
+
+    return true; // Éxito en la eliminación
   }
+
 
   // Aquí podrías agregar más métodos como obtenerCanchaPorId, crearCancha, etc.
 };

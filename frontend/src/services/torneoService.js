@@ -27,6 +27,18 @@ export const torneoService = {
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
+  },
+  async eliminarTorneo(id_torneo) {
+    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_torneo}`);
+
+    const response = await fetch(`${API_BASE_URL}/${id_torneo}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+        const errorDetail = await response.text();
+        throw new Error(`Error al eliminar el torneo: ${response.status} ${response.statusText} - ${errorDetail}`);
+    }
+
+    return true; // Éxito en la eliminación
   }
 
   // Aquí podrías agregar más métodos.

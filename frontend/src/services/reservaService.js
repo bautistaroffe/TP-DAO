@@ -27,6 +27,18 @@ export const reservaService = {
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
+  },
+  async eliminarReserva(id_reserva) {
+    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_reserva}`);
+
+    const response = await fetch(`${API_BASE_URL}/${id_reserva}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+        const errorDetail = await response.text();
+        throw new Error(`Error al eliminar la reserva: ${response.status} ${response.statusText} - ${errorDetail}`);
+    }
+
+    return true; // Éxito en la eliminación
   }
 
   // Aquí podrías agregar más métodos.

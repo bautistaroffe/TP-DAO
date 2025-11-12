@@ -1,26 +1,25 @@
 // src/components/CanchaTable.jsx
 
 import React, { useState, useEffect } from 'react';
-import { canchaService } from '../../services/canchaService.js';
-// Asume que necesitas 'useNavigate' si usas React Router para la navegación
-// import { useNavigate } from 'react-router-dom';
+import { canchaService } from '../../services/canchaService.js'; // Asegúrate de que la ruta sea correcta
 
 const CanchaTable = () => {
-    // const navigate = useNavigate(); // Descomentar si usas React Router
     const [canchas, setCanchas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [confirmId, setConfirmId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    // Lógica de carga de datos (sin cambios)
+    // Lógica de carga de datos
     useEffect(() => {
         const fetchCanchas = async () => {
-            // ... (código de fetchCanchas existente) ...
             try {
                 const data = await canchaService.obtenerCanchas();
                 setCanchas(data);
                 setError(null);
             } catch (err) {
-                setError("Error al cargar la lista de canchas. Intente más tarde.");
+                setError("Error al cargar la lista de canchas. Revisa la conexión con el Backend.");
+                console.error("Detalle del error:", err);
             } finally {
                 setLoading(false);
             }
@@ -29,95 +28,156 @@ const CanchaTable = () => {
     }, []);
 
     // ---------------------------------
-    // Lógica de los botones de Acción
+    // Lógica de Acciones
     // ---------------------------------
 
     const handleModificar = (id_cancha) => {
-        // Lógica para modificar: Típicamente navega a un formulario de edición
-        console.log(`Modificar Cancha ID: ${id_cancha}`);
-        // navigate(`/canchas/editar/${id_cancha}`); // Ejemplo con React Router
+        console.log(`[ACCIÓN] Modificar Cancha ID: ${id_cancha}`);
     };
 
+    // Abre la UI de confirmación
     const handleEliminar = (id_cancha) => {
-        // Lógica para eliminar: Típicamente muestra un modal de confirmación y luego llama al servicio DELETE
-        if (window.confirm(`¿Estás seguro de que quieres eliminar la cancha con ID: ${id_cancha}?`)) {
-            console.log(`Eliminar Cancha ID: ${id_cancha}`);
-            // Aquí iría la llamada a canchaService.eliminar(id_cancha).then(...)
+        setConfirmId(id_cancha);
+    };
+
+    // Confirma y ejecuta la eliminación
+    const confirmDeletion = async () => {
+        if (!confirmId) return;
+
+        setIsDeleting(true);
+        try {
+            await canchaService.eliminarCancha(confirmId);
+
+            // Actualiza la lista en el estado local
+            setCanchas(canchas.filter(c => c.id_cancha !== confirmId));
+
+            console.log(`Cancha ID ${confirmId} eliminada con éxito.`);
+
+        } catch (error) {
+            setError(`Error al eliminar la cancha ${confirmId}.`);
+            console.error(error);
+        } finally {
+            setConfirmId(null);
+            setIsDeleting(false);
         }
     };
 
+    // Cancela la eliminación
+    const cancelDeletion = () => {
+        setConfirmId(null);
+    };
+
+    const canchaToDelete = canchas.find(c => c.id_cancha === confirmId);
+
     // ---------------------------------
-    // Componente de Fila (Ajustado)
+    // Componente de Fila
     // ---------------------------------
     const CanchaRow = ({ cancha }) => {
-        const estadoClase = cancha.estado === 'disponible' ? 'text-green-600 font-bold' : 'text-red-600';
-        const techadaIcono = cancha.techada ? '✅ Sí' : '❌ No';
-        const iluminacionIcono = cancha.iluminacion ? '💡 Sí' : '🌑 No';
+        const estadoClase = cancha.estado === 'disponible'
+            ? 'text-green-600 font-semibold'
+            : 'text-red-600 font-semibold';
+
+        const techadaIcono = cancha.techada ? '✅' : '❌';
+        const iluminacionIcono = cancha.iluminacion ? '💡' : '🌑';
 
         return (
-            <tr className="border-b hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cancha.id_cancha}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cancha.nombre}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cancha.tipo.toUpperCase()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cancha.superficie || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">${cancha.precio_base.toFixed(2)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{techadaIcono}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{iluminacionIcono}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${estadoClase}`}>{cancha.estado.toUpperCase()}</td>
+            <tr className="border-b transition duration-150 ease-in-out hover:bg-indigo-50/20">
 
-                {/* 🔹 NUEVA CELDA DE ACCIONES 🔹 */}
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                {/* Datos de la Cancha */}
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">{cancha.id_cancha}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">{cancha.nombre}</td>
+                <td className="px-4 py-3 text-sm font-medium text-blue-600">{cancha.tipo.toUpperCase()}</td>
+                <td className="px-4 py-3 text-sm text-gray-500">{cancha.superficie || 'N/A'}</td>
+                <td className="px-4 py-3 text-sm font-bold text-indigo-700">${cancha.precio_base.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm text-center">{techadaIcono}</td>
+                <td className="px-4 py-3 text-sm text-center">{iluminacionIcono}</td>
+                <td className={`px-4 py-3 text-sm ${estadoClase}`}>{cancha.estado.toUpperCase()}</td>
+
+                {/* Columna de Acciones */}
+                <td className="px-4 py-3 text-sm space-x-2">
                     <button
                         onClick={() => handleModificar(cancha.id_cancha)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-2 border border-indigo-600 px-3 py-1 rounded transition duration-150 ease-in-out"
+                        className="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-600 px-3 py-1 rounded-full text-xs font-semibold transition duration-200"
                     >
                         Modificar
                     </button>
                     <button
                         onClick={() => handleEliminar(cancha.id_cancha)}
-                        className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition duration-150 ease-in-out"
+                        className="text-red-600 hover:text-white hover:bg-red-600 border border-red-600 px-3 py-1 rounded-full text-xs font-semibold transition duration-200"
+                        disabled={isDeleting}
                     >
                         Eliminar
                     </button>
                 </td>
-                {/* 🔹 FIN NUEVA CELDA 🔹 */}
             </tr>
         );
     };
 
     // ---------------------------------
-    // Renderizado (Ajustado)
+    // Renderizado (Loading, Error, Tabla)
     // ---------------------------------
-    if (loading || error || canchas.length === 0) {
-        // ... (código de loading/error/empty existente) ...
-        return <div className="p-4">{loading ? 'Cargando...' : error || 'No hay canchas.'}</div>;
-    }
+
+    // Mensajes de estado
+    if (loading) return <div className="p-4 text-center text-xl text-indigo-500 animate-pulse">Cargando canchas...</div>;
+    if (error) return <div className="p-4 text-center text-red-600 bg-red-100 border border-red-400 rounded-lg mx-auto max-w-lg">{error}</div>;
+    if (canchas.length === 0) return <div className="p-4 text-center text-gray-500">No hay canchas registradas para mostrar.</div>;
 
     return (
-        <div className="cancha-table-container shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        {/* Columnas Existentes */}
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Superficie</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio/h</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Techada</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Iluminación</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        {/* 🔹 NUEVA COLUMNA DE ACCIONES 🔹 */}
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        {/* 🔹 FIN NUEVA COLUMNA 🔹 */}
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {canchas.map(cancha => (
-                        <CanchaRow key={cancha.id_cancha} cancha={cancha} />
-                    ))}
-                </tbody>
-            </table>
+        <div className="relative">
+             <div className="overflow-x-auto shadow-2xl rounded-xl">
+                <table className="min-w-full divide-y divide-gray-200">
+
+                    {/* Encabezado */}
+                    <thead className="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nombre</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipo</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Superficie</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Precio/h</th>
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Techada</th>
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Iluminación</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Estado</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    {/* Cuerpo de la Tabla */}
+                    <tbody className="bg-white divide-y divide-gray-100">
+                        {canchas.map(cancha => (
+                            <CanchaRow key={cancha.id_cancha} cancha={cancha} />
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modal de Confirmación */}
+            {confirmId && canchaToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-md">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Confirmar Eliminación</h3>
+                        <p className="text-gray-600 mb-6">
+                            ¿Estás seguro de que deseas eliminar la cancha: <span className="font-bold text-red-500">{canchaToDelete.nombre} (ID: {confirmId})</span>? Esta acción es irreversible.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={cancelDeletion}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150"
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDeletion}
+                                className={`px-4 py-2 rounded-lg text-white font-semibold transition duration-150 ${isDeleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Confirmar Eliminación'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

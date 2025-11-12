@@ -43,12 +43,14 @@ const TurnoTable = () => {
         setConfirmId(id_turno);
     };
 
-    // Confirma y ejecuta la eliminación
+    // Confirma y ejecuta la eliminación (MODIFICADO para capturar error.message)
     const confirmDeletion = async () => {
         if (!confirmId) return;
 
         setIsDeleting(true);
+        setError(null); // Limpiar errores antes de intentar
         try {
+            // Llama al service (ya tiene manejo robusto de errores)
             await turnoService.eliminarTurno(confirmId);
 
             // Actualiza la lista eliminando el turno del estado local
@@ -57,8 +59,9 @@ const TurnoTable = () => {
             console.log(`Turno ID ${confirmId} eliminado con éxito.`);
 
         } catch (error) {
-            setError(`Error al eliminar el turno ${confirmId}.`);
-            console.error(error);
+            // Captura el mensaje de error detallado del service y lo muestra
+            setError(`Error al eliminar el turno: ${error.message}`);
+            console.error("Error de eliminación:", error);
         } finally {
             setConfirmId(null);
             setIsDeleting(false);
@@ -99,6 +102,7 @@ const TurnoTable = () => {
                     <button
                         onClick={() => handleModificar(turno.id_turno)}
                         className="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-600 px-3 py-1 rounded-full text-xs font-semibold transition duration-200"
+                        disabled={isDeleting}
                     >
                         Modificar
                     </button>
@@ -118,13 +122,16 @@ const TurnoTable = () => {
     // Renderizado (Loading, Error, Tabla)
     // ---------------------------------
 
-    // Mensajes de estado (diseño simple y centrado, usando clases de App.css)
+    const ErrorDisplay = () => (
+        <div className="cancha-error p-4 text-center border rounded-lg mx-auto max-w-lg mt-4">{error}</div>
+    );
+
     if (loading) return <div className="cancha-loading p-8 text-center text-xl animate-pulse">Cargando turnos...</div>;
-    if (error) return <div className="cancha-error p-8 text-center border rounded-lg mx-auto max-w-lg">{error}</div>;
     if (turnos.length === 0) return <div className="cancha-empty p-8 text-center text-gray-500">No hay turnos registrados para mostrar.</div>;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="relative">
+            {error && <ErrorDisplay />}
              <div className="overflow-x-auto shadow-2xl rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
 

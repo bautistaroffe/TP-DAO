@@ -27,6 +27,18 @@ export const usuarioService = {
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
+  },
+  async eliminarUsuario(id_usuario) {
+    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_usuario}`);
+
+    const response = await fetch(`${API_BASE_URL}/${id_usuario}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+        const errorDetail = await response.text();
+        throw new Error(`Error al eliminar el usuario: ${response.status} ${response.statusText} - ${errorDetail}`);
+    }
+
+    return true; // Éxito en la eliminación
   }
 
   // Aquí podrías agregar más métodos como obtenerTurnoPorId, crearTurno, etc.
