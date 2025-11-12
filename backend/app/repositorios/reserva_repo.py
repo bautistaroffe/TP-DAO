@@ -51,16 +51,28 @@ class ReservaRepository(BaseRepository):
         filas = self.obtener_todos(query, (id_cancha, fecha_inicio, fecha_fin))
         return [Reserva(**f) for f in filas]
 
-    def obtener_utilizacion_mensual(self, año):
+    def obtener_utilizacion_mensual(self, año, mes=None):
+        if mes:
+            query = """
+                    SELECT c.nombre AS cancha, COUNT(r.id_reserva) AS total_reservas
+                    FROM Reserva r
+                             JOIN Cancha c ON r.id_cancha = c.id_cancha
+                             JOIN Turno t ON r.id_turno = t.id_turno
+                    WHERE strftime('%Y', t.fecha) = ? \
+                      AND strftime('%m', t.fecha) = ?
+                    GROUP BY c.nombre
+                    ORDER BY total_reservas DESC; \
+                    """
+            return self.obtener_todos(query, (str(año), f"{mes:02d}"))
+
+        # Agrupado por mes si no se pasa parámetro
         query = """
-            SELECT c.nombre AS cancha, 
-                   strftime('%m', t.fecha) AS mes, 
-                   COUNT(r.id_reserva) AS total_reservas
-            FROM Reserva r
-            JOIN Turno t ON r.id_turno = t.id_turno
-            JOIN Cancha c ON r.id_cancha = c.id_cancha
-            WHERE strftime('%Y', t.fecha) = ?
-            GROUP BY c.nombre, mes
-            ORDER BY c.nombre, mes
-        """
+                SELECT c.nombre AS cancha, strftime('%m', t.fecha) AS mes, COUNT(r.id_reserva) AS total_reservas
+                FROM Reserva r
+                         JOIN Cancha c ON r.id_cancha = c.id_cancha
+                         JOIN Turno t ON r.id_turno = t.id_turno
+                WHERE strftime('%Y', t.fecha) = ?
+                GROUP BY c.nombre, mes
+                ORDER BY c.nombre, mes; \
+                """
         return self.obtener_todos(query, (str(año),))
