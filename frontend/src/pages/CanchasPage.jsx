@@ -27,7 +27,7 @@ export default function CanchasPage() {
                 </button>
             </div>
 
-            {/* Componente de la Tabla de Canchas */}
+            {/* Componente de la Tabla de Canchas dd */}
             <CanchaTable />
 
         </div>
