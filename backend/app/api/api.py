@@ -15,7 +15,7 @@ app = FastAPI(
     version="1.0.0"
 )
 origins = [
-    # 🚨 ESTE ES EL ORIGEN CLAVE: El puerto donde corre tu frontend
+    #  ESTE ES EL ORIGEN CLAVE: El puerto donde corre tu frontend
     "http://localhost:5174",
     "http://localhost:5173",
     # Si planeas desplegar o usar otro frontend en localhost:
@@ -42,7 +42,7 @@ app.include_router(turnos_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
 app.include_router(pagos_router, prefix="/api")
 app.include_router(servicios_adicionales_router, prefix="/api")
-
+app.include_router(reportes_router, prefix="/api")
 
 # ============================
 # Ruta raíz
