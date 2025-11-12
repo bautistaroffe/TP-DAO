@@ -12,12 +12,12 @@ DIAS_EXCLUIDOS = [(12, 25), (1, 1)]  # (mes, día)
 
 CANCHAS = [
     # tipo, nombre, superficie, tamaño, techada, iluminacion, precio_base
-    ("futbol", "Fútbol 1", "césped sintético", "grande", 0, 1, 12000),
-    ("futbol", "Fútbol 2", "césped natural", "mediana", 0, 0, 10000),
-    ("padel", "Pádel 1", "blindex", None, 1, 1, 8000),
-    ("padel", "Pádel 2", "muro", None, 0, 1, 7000),
-    ("basquet", "Básquet 1", None, "reglamentaria", 0, 1, 9000),
-    ("basquet", "Básquet 2", None, "recreativa", 1, 0, 8500),
+    ("futbol", "Monumental", "césped Sintético", "7", 0, 1, 65000),
+    ("futbol", "Bombonera", "cemento", "5", 0, 0, 50000),
+    ("padel", "Pádel 1", "Cesped sintético", None, 1, 1, 40000),
+    ("padel", "Pádel 2", "Cemento", None, 0, 1, 40000),
+    ("basquet", "Básquet 1", None, "5", 0, 1, 9000),
+    ("basquet", "Básquet 2", None, "3", 1, 0, 8500),
 ]
 
 

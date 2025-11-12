@@ -1,9 +1,9 @@
-const API_BASE_URL = "http://localhost:8000/api/canchas";
+const API_BASE_URL = "http://localhost:8000/api/turnos";
 
-export const canchaService = {
-    
-  async obtenerCanchas() {
-    console.log(`Intentando obtener canchas desde: ${API_BASE_URL}`);
+export const turnoService = {
+
+  async obtenerTurnos() {
+    console.log(`Intentando obtener turnos desde: ${API_BASE_URL}`);
 
     try {
       // 1. Realizar la solicitud HTTP GET
@@ -17,17 +17,17 @@ export const canchaService = {
       }
 
       // 3. Convertir la respuesta a JSON
-      const canchas = await response.json();
+      const turnos = await response.json();
 
       // 4. Devolver los datos (los DTOs)
-      return canchas;
+      return turnos;
 
     } catch (error) {
-      console.error("Fallo al obtener la lista de canchas:", error);
+      console.error("Fallo al obtener la lista de turnos:", error);
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
   }
 
-  // Aquí podrías agregar más métodos como obtenerCanchaPorId, crearCancha, etc.
+  // Aquí podrías agregar más métodos como obtenerTurnoPorId, crearTurno, etc.
 };
