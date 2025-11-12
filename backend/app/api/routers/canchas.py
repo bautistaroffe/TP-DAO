@@ -52,16 +52,17 @@ def obtener_por_tipo(tipo: str):
 @router.post("/", summary="Crear una nueva cancha", response_model=CanchaDTO)
 def crear_cancha(dto: CanchaDTO):
     try:
-        cancha = service.crear_cancha(
+        return service.crear_cancha(
             tipo=dto.tipo,
             nombre=dto.nombre,
             precio_base=dto.precio_base,
             techada=dto.techada,
             iluminacion=dto.iluminacion,
             superficie=dto.superficie,
-            tamaño=dto.tamaño
+            tamaño=dto.tamaño,
+            estado=dto.estado
         )
-        return cancha
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

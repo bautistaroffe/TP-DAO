@@ -1,6 +1,6 @@
 # TP-DAO
 
-Estructura
+## Estructura
 ```plaintext
 reservas-canchas/
 ├── README.md
@@ -94,7 +94,7 @@ reservas-canchas/
     ├── diagrama_casos_uso.pdf
     └── plan_trabajo.md
 ```
-INSTRUCCIONES
+## Instrucciones
 Los pasos y requisitos para correr el frontend estan en el README.md dentro de la carptea frontend
 Los pasos para ejecutar el practico son:nose si hay q descargar algo o no.
 posicionarse en la raiz y ejecutar:
@@ -106,3 +106,9 @@ http://127.0.0.1:8000/docs
 
 Para generar datos para prubeas recomiendo:
 https://mostly.ai/
+
+## Vistas del frontend
+Usuario:
+ http://localhost:5174/
+Administrador:
+ http://localhost:5174/predio

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routers.canchas import router as canchas_router
 from backend.app.api.routers.reservas import router as reservas_router
 from backend.app.api.routers.torneos import router as torneos_router
@@ -13,11 +14,26 @@ app = FastAPI(
     description="Sistema completo de gestión de canchas, reservas, torneos, pagos y servicios adicionales.",
     version="1.0.0"
 )
+origins = [
+    # 🚨 ESTE ES EL ORIGEN CLAVE: El puerto donde corre tu frontend
+    "http://localhost:5174",
+    # Si planeas desplegar o usar otro frontend en localhost:
+    "http://localhost",
+    "http://localhost:3000", # Puertos comunes para React/Vite
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,              # Permite los orígenes definidos arriba
+    allow_credentials=True,             # Permite cookies de origen cruzado
+    allow_methods=["*"],                # Permite todos los métodos (GET, POST, DELETE, etc.)
+    allow_headers=["*"],                # Permite todos los encabezados
+)
 
 # ============================
 # Inclusión de Routers
 # ============================
-app.include_router(canchas_router)
+app.include_router(canchas_router, prefix="/api")
 app.include_router(reservas_router)
 app.include_router(torneos_router)
 app.include_router(turnos_router)
