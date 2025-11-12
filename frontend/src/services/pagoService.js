@@ -1,9 +1,9 @@
-const API_BASE_URL = "http://localhost:8000/api/usuarios";
+const API_BASE_URL = "http://localhost:8000/api/pagos";
 
-export const usuarioService = {
+export const pagoService = {
 
-  async obtenerUsuarios() {
-    console.log(`Intentando obtener usuarios desde: ${API_BASE_URL}`);
+  async obtenerPagos() {
+    console.log(`Intentando obtener pagos desde: ${API_BASE_URL}`);
 
     try {
       // 1. Realizar la solicitud HTTP GET
@@ -17,17 +17,17 @@ export const usuarioService = {
       }
 
       // 3. Convertir la respuesta a JSON
-      const usuarios = await response.json();
+      const pagos = await response.json();
 
       // 4. Devolver los datos (los DTOs)
-      return usuarios;
+      return pagos;
 
     } catch (error) {
-      console.error("Fallo al obtener la lista de usuarios:", error);
+      console.error("Fallo al obtener la lista de pagos:", error);
       // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
       throw error;
     }
   }
 
-  // Aquí podrías agregar más métodos como obtenerTurnoPorId, crearTurno, etc.
+  // Aquí podrías agregar más métodos.
 };

@@ -1,7 +1,9 @@
 from datetime import datetime
 from backend.app.dominio.pago import Pago
+from backend.app.dto.pago_dto import PagoDTO
 from backend.app.repositorios.pago_repo import PagoRepository
 from backend.app.repositorios.reserva_repo import ReservaRepository
+
 
 
 class PagoService:
@@ -75,10 +77,15 @@ class PagoService:
     # ============================
     # LISTAR / OBTENER
     # ============================
-    def listar_pagos(self):
+    def listar_pagos(self) -> list[PagoDTO]:
         repo = PagoRepository()
         try:
-            return repo.listar_todos()
+            pagos: list[Pago] = repo.listar_todos()
+            pagos_dto: list[PagoDTO] = [
+                self._mapear_a_dto(pago)
+                for pago in pagos if pago
+            ]
+            return pagos_dto
         finally:
             repo.cerrar()
 
@@ -125,4 +132,16 @@ class PagoService:
             raise
         finally:
             repo.cerrar()
+
+    def _mapear_a_dto(self, pago: Pago) -> PagoDTO:
+        data = {
+            "id_pago": pago.id_pago,
+            "id_usuario": pago.id_usuario,
+            "id_reserva": pago.id_reserva,
+            "monto": pago.monto,
+            "fecha_pago": pago.fecha_pago,
+            "metodo": pago.metodo,
+            "estado_transaccion": pago.estado_transaccion
+        }
+        return PagoDTO(**data)
 
