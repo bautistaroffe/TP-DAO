@@ -9,7 +9,7 @@ from backend.app.repositorios.reserva_repo import ReservaRepository
 class TurnoService:
 
     # ============================
-    # VALIDACIONES
+    # VALIDACIONES DE NEGOCIO
     # ============================
     def _validar_campos(self, id_cancha, fecha, hora_inicio, hora_fin):
         if not id_cancha:
@@ -20,7 +20,8 @@ class TurnoService:
             raise ValueError("Debe indicar hora de inicio y hora de fin.")
         if hora_inicio >= hora_fin:
             raise ValueError("La hora de inicio debe ser anterior a la hora de fin.")
-        # validar que la cancha exista
+
+        # Validar que la cancha exista
         repo_cancha = CanchaRepository()
         try:
             cancha = repo_cancha.obtener_por_id(id_cancha)
@@ -30,6 +31,7 @@ class TurnoService:
             repo_cancha.cerrar()
 
     def _turno_disponible(self, id_cancha, fecha, hora_inicio, hora_fin):
+        """Verifica si el nuevo turno se superpone con algún turno existente."""
         repo_turno = TurnoRepository()
         try:
             turnos = repo_turno.listar_todos()
@@ -37,6 +39,26 @@ class TurnoService:
             repo_turno.cerrar()
 
         for t in turnos:
+            if t.id_cancha == id_cancha and t.fecha == fecha:
+                # Chequeo de superposición: si no termina antes de que el existente inicie,
+                # O si no inicia después de que el existente termina.
+                if not (hora_fin <= t.hora_inicio or hora_inicio >= t.hora_fin):
+                    return False
+        return True
+
+    def _turno_disponible_para_actualizar(self, id_turno_a_ignorar, id_cancha, fecha, hora_inicio, hora_fin):
+        """Verifica si el turno actualizado se superpone con otros turnos, ignorándose a sí mismo."""
+        repo_turno = TurnoRepository()
+        try:
+            turnos = repo_turno.listar_todos()
+        finally:
+            repo_turno.cerrar()
+
+        for t in turnos:
+            # Ignorar el turno que estamos actualizando
+            if t.id_turno == id_turno_a_ignorar:
+                continue
+
             if t.id_cancha == id_cancha and t.fecha == fecha:
                 if not (hora_fin <= t.hora_inicio or hora_inicio >= t.hora_fin):
                     return False
@@ -47,6 +69,7 @@ class TurnoService:
     # ============================
     def crear_turno(self, id_cancha: int, fecha: date, hora_inicio: time, hora_fin: time, estado="disponible"):
         self._validar_campos(id_cancha, fecha, hora_inicio, hora_fin)
+
         if not self._turno_disponible(id_cancha, fecha, hora_inicio, hora_fin):
             raise ValueError("Ya existe un turno que se superpone en ese horario para la misma cancha.")
 
@@ -62,7 +85,7 @@ class TurnoService:
         try:
             repo.agregar(turno)
             repo.commit()
-            return turno
+            return self._mapear_a_dto(turno)
         except Exception:
             repo.rollback()
             raise
@@ -93,7 +116,7 @@ class TurnoService:
             turno = repo.obtener_por_id(id_turno)
             if not turno:
                 raise ValueError("Turno no encontrado.")
-            return turno
+            return self._mapear_a_dto(turno)  # Mapeamos a DTO para el frontend
         finally:
             repo.cerrar()
 
@@ -114,13 +137,22 @@ class TurnoService:
             if not turno:
                 raise ValueError("Turno no encontrado.")
 
-            if "hora_inicio" in datos_actualizados or "hora_fin" in datos_actualizados:
-                hi = datos_actualizados.get("hora_inicio", turno.hora_inicio)
-                hf = datos_actualizados.get("hora_fin", turno.hora_fin)
-                if hi >= hf:
-                    raise ValueError("La hora de inicio debe ser anterior a la de fin.")
+            # Preparar valores para validación
+            id_cancha = datos_actualizados.get("id_cancha", turno.id_cancha)
+            fecha = datos_actualizados.get("fecha", turno.fecha)
+            hora_inicio = datos_actualizados.get("hora_inicio", turno.hora_inicio)
+            hora_fin = datos_actualizados.get("hora_fin", turno.hora_fin)
+
+            # Validar lógica de horas
+            if hora_inicio >= hora_fin:
+                raise ValueError("La hora de inicio debe ser anterior a la de fin.")
+
             if "fecha" in datos_actualizados and not datos_actualizados["fecha"]:
                 raise ValueError("La fecha no puede ser vacía.")
+
+            # 🟢 VALIDACIÓN DE UNICIDAD/SUPERPOSICIÓN (Ignorando el turno actual)
+            if not self._turno_disponible_para_actualizar(id_turno, id_cancha, fecha, hora_inicio, hora_fin):
+                raise ValueError("La modificación se superpone con un turno existente en ese horario.")
 
             for campo, valor in datos_actualizados.items():
                 if hasattr(turno, campo):
@@ -128,7 +160,7 @@ class TurnoService:
 
             repo.actualizar(turno)
             repo.commit()
-            return turno
+            return self._mapear_a_dto(turno)
         except Exception:
             repo.rollback()
             raise
@@ -196,7 +228,7 @@ class TurnoService:
         finally:
             repo.cerrar()
 
-    def _mapear_a_dto(self, turno:Turno) -> TurnoDTO:
+    def _mapear_a_dto(self, turno: Turno) -> TurnoDTO:
         data = {
             "id_turno": turno.id_turno,
             "id_cancha": turno.id_cancha,
@@ -205,6 +237,4 @@ class TurnoService:
             "hora_fin": turno.hora_fin,
             "estado": turno.estado
         }
-
-
         return TurnoDTO(**data)
