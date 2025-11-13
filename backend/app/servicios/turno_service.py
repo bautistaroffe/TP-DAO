@@ -9,6 +9,20 @@ from backend.app.repositorios.reserva_repo import ReservaRepository
 class TurnoService:
 
     # ============================
+    # Mapeo
+    # ============================
+    def _mapear_a_dto(self, turno: Turno) -> TurnoDTO:
+        data = {
+            "id_turno": turno.id_turno,
+            "id_cancha": turno.id_cancha,
+            "fecha": turno.fecha,
+            "hora_inicio": turno.hora_inicio,
+            "hora_fin": turno.hora_fin,
+            "estado": turno.estado
+        }
+        return TurnoDTO(**data)
+
+    # ============================
     # VALIDACIONES DE NEGOCIO
     # ============================
     def _validar_campos(self, id_cancha, fecha, hora_inicio, hora_fin):
@@ -21,27 +35,24 @@ class TurnoService:
         if hora_inicio >= hora_fin:
             raise ValueError("La hora de inicio debe ser anterior a la hora de fin.")
 
-        # Validar que la cancha exista
+        # Validar que la cancha exista (BaseRepository maneja la conexión)
         repo_cancha = CanchaRepository()
-        try:
-            cancha = repo_cancha.obtener_por_id(id_cancha)
-            if not cancha:
-                raise ValueError("La cancha especificada no existe.")
-        finally:
-            repo_cancha.cerrar()
+        cancha = repo_cancha.obtener_por_id(id_cancha)
+        if not cancha:
+            raise ValueError("La cancha especificada no existe.")
 
     def _turno_disponible(self, id_cancha, fecha, hora_inicio, hora_fin):
         """Verifica si el nuevo turno se superpone con algún turno existente."""
         repo_turno = TurnoRepository()
-        try:
-            turnos = repo_turno.listar_todos()
-        finally:
-            repo_turno.cerrar()
+        # La conexión se abre y cierra en listar_todos()
+        turnos = repo_turno.listar_todos()
 
         for t in turnos:
-            if t.id_cancha == id_cancha and t.fecha == fecha:
-                # Chequeo de superposición: si no termina antes de que el existente inicie,
-                # O si no inicia después de que el existente termina.
+            if t and t.id_cancha == id_cancha and t.fecha == fecha:
+                # Chequeo de superposición:
+                # El nuevo turno NO se superpone si:
+                # 1. Termina antes de que el existente inicie (hora_fin <= t.hora_inicio)
+                # 2. O inicia después de que el existente termina (hora_inicio >= t.hora_fin)
                 if not (hora_fin <= t.hora_inicio or hora_inicio >= t.hora_fin):
                     return False
         return True
@@ -49,17 +60,15 @@ class TurnoService:
     def _turno_disponible_para_actualizar(self, id_turno_a_ignorar, id_cancha, fecha, hora_inicio, hora_fin):
         """Verifica si el turno actualizado se superpone con otros turnos, ignorándose a sí mismo."""
         repo_turno = TurnoRepository()
-        try:
-            turnos = repo_turno.listar_todos()
-        finally:
-            repo_turno.cerrar()
+        # La conexión se abre y cierra en listar_todos()
+        turnos = repo_turno.listar_todos()
 
         for t in turnos:
             # Ignorar el turno que estamos actualizando
-            if t.id_turno == id_turno_a_ignorar:
+            if t and t.id_turno == id_turno_a_ignorar:
                 continue
 
-            if t.id_cancha == id_cancha and t.fecha == fecha:
+            if t and t.id_cancha == id_cancha and t.fecha == fecha:
                 if not (hora_fin <= t.hora_inicio or hora_inicio >= t.hora_fin):
                     return False
         return True
@@ -82,90 +91,74 @@ class TurnoService:
         )
 
         repo = TurnoRepository()
-        try:
-            repo.agregar(turno)
-            repo.commit()
-            return self._mapear_a_dto(turno)
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # repo.agregar es atómico: ejecuta INSERT y commitea.
+        repo.agregar(turno)
+        return self._mapear_a_dto(turno)
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_turnos(self) -> list[TurnoDTO]:
         repo = TurnoRepository()
-        try:
-            # 1. Obtiene las entidades del repositorio
-            turnos: list[Turno] = repo.listar_todos()
+        # La conexión se abre y cierra en listar_todos()
+        turnos: list[Turno] = repo.listar_todos()
 
-            # 2. Mapea cada entidad a un DTO
-            turnos_dto: list[TurnoDTO] = [
-                self._mapear_a_dto(turno)
-                for turno in turnos if turno
-            ]
-            return turnos_dto
-        finally:
-            repo.cerrar()
+        # Mapea cada entidad a un DTO
+        turnos_dto: list[TurnoDTO] = [
+            self._mapear_a_dto(turno)
+            for turno in turnos if turno
+        ]
+        return turnos_dto
 
     def obtener_turno_por_id(self, id_turno: int):
         repo = TurnoRepository()
-        try:
-            turno = repo.obtener_por_id(id_turno)
-            if not turno:
-                raise ValueError("Turno no encontrado.")
-            return self._mapear_a_dto(turno)  # Mapeamos a DTO para el frontend
-        finally:
-            repo.cerrar()
+        # La conexión se abre y cierra en obtener_por_id()
+        turno = repo.obtener_por_id(id_turno)
+        if not turno:
+            raise ValueError("Turno no encontrado.")
+        return self._mapear_a_dto(turno)
 
     def listar_turnos_por_cancha(self, id_cancha: int):
         repo = TurnoRepository()
-        try:
-            return [t for t in repo.listar_todos() if t.id_cancha == id_cancha]
-        finally:
-            repo.cerrar()
+        # Este método es ineficiente; idealmente se haría en el repositorio con un WHERE
+        # Pero manteniendo la lógica original:
+        turnos = repo.listar_todos()
+        return [self._mapear_a_dto(t) for t in turnos if t and t.id_cancha == id_cancha]
 
     # ============================
     # ACTUALIZAR
     # ============================
     def actualizar_turno(self, id_turno, **datos_actualizados):
         repo = TurnoRepository()
-        try:
-            turno = repo.obtener_por_id(id_turno)
-            if not turno:
-                raise ValueError("Turno no encontrado.")
 
-            # Preparar valores para validación
-            id_cancha = datos_actualizados.get("id_cancha", turno.id_cancha)
-            fecha = datos_actualizados.get("fecha", turno.fecha)
-            hora_inicio = datos_actualizados.get("hora_inicio", turno.hora_inicio)
-            hora_fin = datos_actualizados.get("hora_fin", turno.hora_fin)
+        turno = repo.obtener_por_id(id_turno)
+        if not turno:
+            raise ValueError("Turno no encontrado.")
 
-            # Validar lógica de horas
-            if hora_inicio >= hora_fin:
-                raise ValueError("La hora de inicio debe ser anterior a la de fin.")
+        # Preparar valores para validación, usando los valores existentes si no se actualizan
+        id_cancha = datos_actualizados.get("id_cancha", turno.id_cancha)
+        fecha = datos_actualizados.get("fecha", turno.fecha)
+        hora_inicio = datos_actualizados.get("hora_inicio", turno.hora_inicio)
+        hora_fin = datos_actualizados.get("hora_fin", turno.hora_fin)
 
-            if "fecha" in datos_actualizados and not datos_actualizados["fecha"]:
-                raise ValueError("La fecha no puede ser vacía.")
+        # Validar lógica de horas
+        if hora_inicio >= hora_fin:
+            raise ValueError("La hora de inicio debe ser anterior a la de fin.")
 
-            # 🟢 VALIDACIÓN DE UNICIDAD/SUPERPOSICIÓN (Ignorando el turno actual)
-            if not self._turno_disponible_para_actualizar(id_turno, id_cancha, fecha, hora_inicio, hora_fin):
-                raise ValueError("La modificación se superpone con un turno existente en ese horario.")
+        if "fecha" in datos_actualizados and not datos_actualizados["fecha"]:
+            raise ValueError("La fecha no puede ser vacía.")
 
-            for campo, valor in datos_actualizados.items():
-                if hasattr(turno, campo):
-                    setattr(turno, campo, valor)
+        # 🟢 VALIDACIÓN DE UNICIDAD/SUPERPOSICIÓN (Ignorando el turno actual)
+        if not self._turno_disponible_para_actualizar(id_turno, id_cancha, fecha, hora_inicio, hora_fin):
+            raise ValueError("La modificación se superpone con un turno existente en ese horario.")
 
-            repo.actualizar(turno)
-            repo.commit()
-            return self._mapear_a_dto(turno)
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        for campo, valor in datos_actualizados.items():
+            if hasattr(turno, campo):
+                setattr(turno, campo, valor)
+
+        # repo.actualizar es atómico: ejecuta UPDATE y commitea.
+        repo.actualizar(turno)
+        return self._mapear_a_dto(turno)
 
     # ============================
     # ELIMINAR
@@ -173,68 +166,45 @@ class TurnoService:
     def eliminar_turno(self, id_turno):
         repo_turno = TurnoRepository()
         repo_reserva = ReservaRepository()
-        try:
-            turno = repo_turno.obtener_por_id(id_turno)
-            if not turno:
-                raise ValueError("Turno no encontrado.")
 
-            reservas = repo_reserva.obtener_todos(
-                "SELECT * FROM Reserva WHERE id_turno=? AND estado IN ('pendiente','confirmada')",
-                (id_turno,)
-            )
-            if reservas:
-                raise ValueError("No se puede eliminar un turno reservado o pendiente.")
+        turno = repo_turno.obtener_por_id(id_turno)
+        if not turno:
+            raise ValueError("Turno no encontrado.")
 
-            repo_turno.eliminar(id_turno)
-            repo_turno.commit()
-            return {"mensaje": f"Turno {id_turno} eliminado correctamente."}
-        except Exception:
-            repo_turno.rollback()
-            raise
-        finally:
-            repo_turno.cerrar()
-            repo_reserva.cerrar()
+        # 2. Verificar reservas activas/pendientes (lectura atómica)
+        reservas = repo_reserva.obtener_todos(
+            "SELECT * FROM Reserva WHERE id_turno=? AND estado IN ('pendiente','confirmada')",
+            (id_turno,)
+        )
+        if reservas:
+            raise ValueError("No se puede eliminar un turno reservado o pendiente.")
+
+        # 3. Eliminar (escritura atómica)
+        repo_turno.eliminar(id_turno)
+
+        return {"mensaje": f"Turno {id_turno} eliminado correctamente."}
 
     # ============================
     # CAMBIO DE ESTADO
     # ============================
     def marcar_como_reservado(self, id_turno):
         repo = TurnoRepository()
-        try:
-            turno = repo.obtener_por_id(id_turno)
-            if not turno:
-                raise ValueError("Turno no encontrado.")
-            turno.estado = "reservado"
-            repo.marcar_como_reservado(id_turno)
-            repo.commit()
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+
+        turno = repo.obtener_por_id(id_turno)
+        if not turno:
+            raise ValueError("Turno no encontrado.")
+
+        turno.estado = "reservado"
+        # repo.marcar_como_reservado es atómico
+        repo.marcar_como_reservado(id_turno)
 
     def marcar_como_disponible(self, id_turno):
         repo = TurnoRepository()
-        try:
-            turno = repo.obtener_por_id(id_turno)
-            if not turno:
-                raise ValueError("Turno no encontrado.")
-            turno.estado = "disponible"
-            repo.marcar_como_disponible(id_turno)
-            repo.commit()
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
 
-    def _mapear_a_dto(self, turno: Turno) -> TurnoDTO:
-        data = {
-            "id_turno": turno.id_turno,
-            "id_cancha": turno.id_cancha,
-            "fecha": turno.fecha,
-            "hora_inicio": turno.hora_inicio,
-            "hora_fin": turno.hora_fin,
-            "estado": turno.estado
-        }
-        return TurnoDTO(**data)
+        turno = repo.obtener_por_id(id_turno)
+        if not turno:
+            raise ValueError("Turno no encontrado.")
+
+        turno.estado = "disponible"
+        # repo.marcar_como_disponible es atómico
+        repo.marcar_como_disponible(id_turno)

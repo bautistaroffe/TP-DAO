@@ -12,6 +12,7 @@ class ServicioAdicionalService:
             raise ValueError("La cantidad de personas para el asado no puede ser negativa.")
         if cant_paletas is not None and cant_paletas < 0:
             raise ValueError("La cantidad de paletas no puede ser negativa.")
+        # Se verifica que los booleanos solo sean True/False o None si no se proporcionan
         if arbitro not in (None, True, False):
             raise ValueError("El campo 'arbitro' debe ser True o False.")
         if partido_grabado not in (None, True, False):
@@ -20,10 +21,10 @@ class ServicioAdicionalService:
             raise ValueError("El campo 'pecheras' debe ser True o False.")
 
     # ============================
-    # CREAR SERVICIO
+    # CREAR SERVICIO (Atómica)
     # ============================
     def crear_servicio(self, cant_personas_asado=0, arbitro=False,
-                       partido_grabado=False, pecheras=False, cant_paletas=0):
+                       partido_grabado=False, pecheras=False, cant_paletas=0) -> ServicioAdicional:
         self._validar_campos(cant_personas_asado, arbitro, partido_grabado, pecheras, cant_paletas)
 
         servicio = ServicioAdicional(
@@ -35,82 +36,66 @@ class ServicioAdicionalService:
         )
 
         repo = ServicioAdicionalRepository()
-        try:
-            repo.agregar(servicio)
-            repo.commit()
-            return servicio
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # repo.agregar es atómico
+        repo.agregar(servicio)
+        return servicio
 
     # ============================
-    # OBTENER / LISTAR
+    # OBTENER / LISTAR (Atómicas)
     # ============================
-    def listar_servicios(self):
+    def listar_servicios(self) -> list[ServicioAdicional]:
         repo = ServicioAdicionalRepository()
-        try:
-            return repo.listar_todos()
-        finally:
-            repo.cerrar()
+        # Lectura atómica
+        return repo.listar_todos()
 
-    def obtener_servicio_por_id(self, id_servicio):
+    def obtener_servicio_por_id(self, id_servicio) -> ServicioAdicional:
         repo = ServicioAdicionalRepository()
-        try:
-            servicio = repo.obtener_por_id(id_servicio)
-            if not servicio:
-                raise ValueError("Servicio adicional no encontrado.")
-            return servicio
-        finally:
-            repo.cerrar()
+        # Lectura atómica
+        servicio = repo.obtener_por_id(id_servicio)
+        if not servicio:
+            raise ValueError("Servicio adicional no encontrado.")
+        return servicio
 
     # ============================
-    # ACTUALIZAR
+    # ACTUALIZAR (Atómica)
     # ============================
-    def actualizar_servicio(self, id_servicio, **datos_actualizados):
+    def actualizar_servicio(self, id_servicio, **datos_actualizados) -> ServicioAdicional:
         repo = ServicioAdicionalRepository()
-        try:
-            servicio = repo.obtener_por_id(id_servicio)
-            if not servicio:
-                raise ValueError("Servicio adicional no encontrado.")
 
-            self._validar_campos(
-                cant_personas_asado=datos_actualizados.get("cant_personas_asado", servicio.cant_personas_asado),
-                arbitro=datos_actualizados.get("arbitro", servicio.arbitro),
-                partido_grabado=datos_actualizados.get("partido_grabado", servicio.partido_grabado),
-                pecheras=datos_actualizados.get("pecheras", servicio.pecheras),
-                cant_paletas=datos_actualizados.get("cant_paletas", servicio.cant_paletas)
-            )
+        # Lectura atómica
+        servicio = repo.obtener_por_id(id_servicio)
+        if not servicio:
+            raise ValueError("Servicio adicional no encontrado.")
 
-            for campo, valor in datos_actualizados.items():
-                if hasattr(servicio, campo):
-                    setattr(servicio, campo, valor)
+        # Validar campos antes de actualizar el objeto
+        self._validar_campos(
+            cant_personas_asado=datos_actualizados.get("cant_personas_asado", servicio.cant_personas_asado),
+            arbitro=datos_actualizados.get("arbitro", servicio.arbitro),
+            partido_grabado=datos_actualizados.get("partido_grabado", servicio.partido_grabado),
+            pecheras=datos_actualizados.get("pecheras", servicio.pecheras),
+            cant_paletas=datos_actualizados.get("cant_paletas", servicio.cant_paletas)
+        )
 
-            repo.actualizar(servicio)
-            repo.commit()
-            return servicio
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # Actualizar el objeto de dominio
+        for campo, valor in datos_actualizados.items():
+            if hasattr(servicio, campo):
+                setattr(servicio, campo, valor)
+
+        # Escritura atómica
+        repo.actualizar(servicio)
+        return servicio
 
     # ============================
-    # ELIMINAR
+    # ELIMINAR (Atómica)
     # ============================
     def eliminar_servicio(self, id_servicio):
         repo = ServicioAdicionalRepository()
-        try:
-            servicio = repo.obtener_por_id(id_servicio)
-            if not servicio:
-                raise ValueError("Servicio adicional no encontrado.")
 
-            repo.eliminar(id_servicio)
-            repo.commit()
-            return {"mensaje": f"Servicio adicional {id_servicio} eliminado correctamente."}
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # Lectura atómica
+        servicio = repo.obtener_por_id(id_servicio)
+        if not servicio:
+            raise ValueError("Servicio adicional no encontrado.")
+
+        # Escritura atómica
+        repo.eliminar(id_servicio)
+        return {"mensaje": f"Servicio adicional {id_servicio} eliminado correctamente."}
