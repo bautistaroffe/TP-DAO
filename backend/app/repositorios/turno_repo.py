@@ -8,7 +8,7 @@ class TurnoRepository(BaseRepository):
         self.ejecutar("""
             INSERT INTO Turno (id_cancha, fecha, hora_inicio, hora_fin, estado)
             VALUES (?, ?, ?, ?, ?)
-        """, (turno.id_cancha, turno.fecha, turno.hora_inicio, turno.hora_fin, turno.estado))
+        """, (turno.id_cancha, str(turno.fecha), str(turno.hora_inicio), str(turno.hora_fin), turno.estado))
         turno.id_turno = self.cursor.lastrowid
         return turno
 
@@ -25,7 +25,7 @@ class TurnoRepository(BaseRepository):
             UPDATE Turno
             SET fecha=?, hora_inicio=?, hora_fin=?, estado=?
             WHERE id_turno=?
-        """, (turno.fecha, turno.hora_inicio, turno.hora_fin, turno.estado, turno.id_turno))
+        """, (str(turno.fecha), str(turno.hora_inicio), str(turno.hora_fin), turno.estado, turno.id_turno))
 
     def eliminar(self, id_turno):
         self.ejecutar("DELETE FROM Turno WHERE id_turno=?", (id_turno,))
