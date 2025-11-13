@@ -5,12 +5,11 @@ class ServicioAdicionalRepository(BaseRepository):
     """CRUD para la tabla ServicioAdicional."""
 
     def agregar(self, servicio: ServicioAdicional):
-        self.ejecutar("""
+        servicio.id_servicio = self.ejecutar("""
             INSERT INTO ServicioAdicional (cant_personas_asado, arbitro, partido_grabado, pecheras, cant_paletas)
             VALUES (?, ?, ?, ?, ?)
         """, (servicio.cant_personas_asado, servicio.arbitro, servicio.partido_grabado,
               servicio.pecheras, servicio.cant_paletas))
-        servicio.id_servicio = self.cursor.lastrowid
         return servicio
 
     def listar_todos(self):

@@ -5,13 +5,13 @@ class ReservaRepository(BaseRepository):
     """CRUD para la tabla Reserva."""
 
     def agregar(self, reserva: Reserva):
-        self.ejecutar("""
+        reserva.id_reserva = self.ejecutar("""
             INSERT INTO Reserva (id_cancha, id_turno, id_cliente, id_torneo, id_servicio,
                                  precio_total, estado, origen)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (reserva.id_cancha, reserva.id_turno, reserva.id_cliente, reserva.id_torneo,
               reserva.id_servicio, reserva.precio_total, reserva.estado, reserva.origen))
-        reserva.id_reserva = self.cursor.lastrowid
+
         return reserva
 
     def listar_todas(self):

@@ -24,7 +24,7 @@ class CanchaRepository(BaseRepository):
         else:
             raise ValueError("Tipo de cancha no reconocido")
 
-        self.ejecutar(
+        cancha.id_cancha = self.ejecutar(
             """
             INSERT INTO Cancha (tipo, nombre, superficie, tamaño, techada, iluminacion, estado, precio_base)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -40,7 +40,7 @@ class CanchaRepository(BaseRepository):
                 cancha.precio_base,
             ),
         )
-        cancha.id_cancha = self.cursor.lastrowid
+
         cancha.tipo = tipo
         return cancha
 

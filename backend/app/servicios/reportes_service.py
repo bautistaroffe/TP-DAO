@@ -74,30 +74,63 @@ class ReportesService:
     # =====================================================
     def generar_reporte_reservas_por_cancha_en_periodo(self, id_cancha: int, fecha_inicio: date, fecha_fin: date):
         """Devuelve las reservas de una cancha entre dos fechas dadas."""
-        reservas = self.reserva_repo.obtener_reservas_por_cancha_y_periodo(id_cancha, fecha_inicio, fecha_fin)
         cancha = self.cancha_repo.obtener_por_id(id_cancha)
         if not cancha:
             raise ValueError("Cancha no encontrada.")
 
+        # 🧩 Llamada al repositorio
+        reservas = self.reserva_repo.obtener_reservas_por_cancha_y_periodo(id_cancha, fecha_inicio, fecha_fin)
+
+        # 🔹 Si el repositorio devuelve None, lo convertimos en lista vacía
+        if not reservas:
+            reservas = []
+
         reporte = {
             "cancha": cancha.nombre,
-            "desde": fecha_inicio,
-            "hasta": fecha_fin,
+            "desde": str(fecha_inicio),  # ✅ Convertimos a str para JSON
+            "hasta": str(fecha_fin),
             "reservas": []
         }
 
         for reserva in reservas:
-            turno = self.turno_repo.obtener_por_id(reserva.id_turno)
-            cliente = self.usuario_repo.obtener_por_id(reserva.id_cliente)
+            try:
+                # 🔹 Obtener entidades relacionadas
+                cancha_r = self.cancha_repo.obtener_por_id(reserva.id_cancha)
+                turno = self.turno_repo.obtener_por_id(reserva.id_turno)
 
-            reporte["reservas"].append({
-                "id_reserva": reserva.id_reserva,
-                "cliente": f"{cliente.nombre} {cliente.apellido}" if cliente else "Desconocido",
-                "fecha_turno": turno.fecha if turno else "Desconocida",
-                "horario": f"{turno.hora_inicio} - {turno.hora_fin}" if turno else "N/D",
-                "precio_total": reserva.precio_total,
-                "estado": reserva.estado
-            })
+                # 🔹 Evita errores si algo no existe
+                cancha_nombre = cancha_r.nombre if cancha_r else "Cancha desconocida"
+                fecha_turno = turno.fecha if turno else "Sin turno"
+                horario = f"{turno.hora_inicio} - {turno.hora_fin}" if turno else "N/D"
+
+                # 🔹 Servicio adicional
+                servicio_info = None
+                if reserva.id_servicio:
+                    servicio = self.servicio_repo.obtener_por_id(reserva.id_servicio)
+                    if servicio:
+                        servicio_info = {
+                            "cant_personas_asado": servicio.cant_personas_asado,
+                            "arbitro": bool(servicio.arbitro),
+                            "partido_grabado": bool(servicio.partido_grabado),
+                            "pecheras": bool(servicio.pecheras),
+                            "cant_paletas": servicio.cant_paletas,
+                        }
+
+                # 🔹 Agrega la reserva al reporte
+                reporte["reservas"].append({
+                    "id_reserva": reserva.id_reserva,
+                    "cancha": cancha_nombre,
+                    "fecha_turno": fecha_turno,
+                    "horario": horario,
+                    "servicio_adicional": servicio_info,
+                    "precio_total": reserva.precio_total,
+                    "estado": reserva.estado,
+                    "origen": reserva.origen,
+                })
+
+            except Exception as e:
+                # 🔸 No bloquea todo el reporte si una reserva tiene error
+                print(f"⚠️ Error procesando reserva {getattr(reserva, 'id_reserva', '?')}: {e}")
 
         return reporte
 
@@ -131,7 +164,7 @@ class ReportesService:
     # =====================================================
     # 4️⃣ REPORTE: Utilización mensual de canchas
     # =====================================================
-    def generar_reporte_utilizacion_mensual(self, año, mes=None):
+    def generar_reporte_utilizacion_mensual(self, anio, mes=None):
         """
         Genera un reporte de utilización de canchas.
         - Si solo se indica el año → devuelve reservas agrupadas por mes.
@@ -140,7 +173,7 @@ class ReportesService:
         if mes is not None and (mes < 1 or mes > 12):
             raise ValueError("El mes debe estar entre 1 y 12.")
 
-        datos = self.reserva_repo.obtener_utilizacion_mensual(año, mes)
+        datos = self.reserva_repo.obtener_utilizacion_mensual(anio, mes)
 
         if mes:  # 🔹 Si el mes está definido, devolvemos solo ese período
             reporte = []

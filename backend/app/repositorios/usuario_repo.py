@@ -5,11 +5,10 @@ class UsuarioRepository(BaseRepository):
     """CRUD para la tabla Usuario."""
 
     def agregar(self, usuario: Usuario):
-        self.ejecutar("""
+        usuario.id_usuario = self.ejecutar("""
             INSERT INTO Usuario (dni, nombre, apellido, telefono, email, estado)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (usuario.dni, usuario.nombre, usuario.apellido, usuario.telefono, usuario.email, usuario.estado))
-        usuario.id_usuario = self.cursor.lastrowid
         return usuario
 
     def listar_todos(self):

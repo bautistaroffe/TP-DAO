@@ -5,11 +5,11 @@ class TorneoRepository(BaseRepository):
     """CRUD para la tabla Torneo."""
 
     def agregar(self, torneo: Torneo):
-        self.ejecutar("""
+        torneo.id_torneo = self.ejecutar("""
             INSERT INTO Torneo (nombre, categoria, fecha_inicio, fecha_fin, estado)
             VALUES (?, ?, ?, ?, ?)
         """, (torneo.nombre, torneo.categoria, torneo.fecha_inicio, torneo.fecha_fin, torneo.estado))
-        torneo.id_torneo = self.cursor.lastrowid
+
         return torneo
 
     def listar_todos(self):
