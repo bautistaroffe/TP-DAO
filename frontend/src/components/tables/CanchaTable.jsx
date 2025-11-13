@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { canchaService } from '../../services/canchaService.js'; // Asegúrate de que la ruta sea correcta
 
-const CanchaTable = () => {
+const CanchaTable = ({ onEditStart }) => {
     const [canchas, setCanchas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -31,10 +31,13 @@ const CanchaTable = () => {
     // Lógica de Acciones
     // ---------------------------------
 
-    // NOTE: Se asume que onEditStart se pasó como prop a CanchaTable.
     const handleModificar = (id_cancha) => {
         console.log(`[ACCIÓN] Modificar Cancha ID: ${id_cancha}`);
-        // if (onEditStart) onEditStart(id_cancha); // Descomentar al usar la página completa
+
+        // 🟢 NUEVA LÍNEA: Llama al callback para abrir el formulario
+        if (onEditStart) {
+            onEditStart(id_cancha);
+        }
     };
 
     // Abre la UI de confirmación
@@ -48,7 +51,6 @@ const CanchaTable = () => {
 
         setIsDeleting(true);
         try {
-            // Nota: Aquí se usa el manejo de errores detallado que implementamos
             await canchaService.eliminarCancha(confirmId);
 
             // Actualiza la lista en el estado local
@@ -83,10 +85,6 @@ const CanchaTable = () => {
         const techadaIcono = cancha.techada ? '✅' : '❌';
         const iluminacionIcono = cancha.iluminacion ? '💡' : '🌑';
 
-        // Lógica de visualización de campos opcionales
-        const superficieDisplay = cancha.superficie || (cancha.tipo !== 'futbol' && cancha.tipo !== 'padel' ? 'N/A' : '---');
-        const tamañoDisplay = cancha.tamaño || (cancha.tipo === 'padel' ? 'N/A' : '---');
-
 
         return (
             <tr className="border-b transition duration-150 ease-in-out hover:bg-indigo-50/20">
@@ -96,7 +94,7 @@ const CanchaTable = () => {
                 <td className="px-4 py-3 text-sm text-gray-700">{cancha.nombre}</td>
                 <td className="px-4 py-3 text-sm font-medium text-blue-600">{cancha.tipo.toUpperCase()}</td>
 
-                {/* 🟢 Superficie (Debe aparecer para Básquet si tiene valor) */}
+                {/* Superficie */}
                 <td className="px-4 py-3 text-sm text-gray-500">{cancha.superficie || '---'}</td>
 
                 {/* Tamaño */}

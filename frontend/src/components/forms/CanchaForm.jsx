@@ -12,7 +12,7 @@ const CONDICIONES = {
         tamaños: [], // No tiene tamaños
     },
     basquet: {
-        superficies: ['Cemento', 'Parquet'],
+        superficies: [],
         tamaños: ['5', '3'], // Tiene tamaños
     }
 };
@@ -147,24 +147,11 @@ const CanchaForm = ({ idCancha, onSuccess, onCancel }) => {
             tamaño: formData.tamaño || null,
         };
 
-        // 🟢 CLAVE: Lógica de limpieza específica para el DTO
-        // La Entidad de Basquet no usa 'superficie' en su __init__ (sólo Padel/Futbol)
-        // La Entidad de Padel no usa 'tamaño' en su __init__ (sólo Futbol/Basquet)
-
         if (formData.tipo === 'padel') {
              // Pádel: No usa tamaño
              delete payload.tamaño;
         }
 
-        // Asumo que si el tipo es Basquet, la superficie SÍ debe ir en el DTO,
-        // y el backend la ignora al instanciar CanchaBasquet si no la necesita.
-        // Si la Entidad CanchaBasquet no acepta 'superficie' en su constructor,
-        // necesitas un DTO separado para la creación o modificar el DTO.
-
-        // DEJAMOS EL PAYLOAD COMPLETO Y CONFIAMOS EN QUE EL BACKEND
-        // SOLO USA LOS CAMPOS RELEVANTES SEGÚN EL TIPO.
-
-        // Si el DTO no permite enviar 'superficie' en el Basquet, hay que borrarlo:
         if (formData.tipo === 'basquet') {
              delete payload.superficie;
         }
