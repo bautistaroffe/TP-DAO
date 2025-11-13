@@ -5,12 +5,12 @@ class PagoRepository(BaseRepository):
     """CRUD para la tabla Pago."""
 
     def agregar(self, pago: Pago):
-        self.ejecutar("""
+        pago.id_pago = self.ejecutar("""
             INSERT INTO Pago (id_usuario, id_reserva, monto, fecha_pago, metodo, estado_transaccion)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (pago.id_usuario, pago.id_reserva, pago.monto, pago.fecha_pago,
               pago.metodo, pago.estado_transaccion))
-        pago.id_pago = self.cursor.lastrowid
+
         return pago
 
     def listar_todos(self):

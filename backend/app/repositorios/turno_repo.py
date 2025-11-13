@@ -5,11 +5,10 @@ class TurnoRepository(BaseRepository):
     """CRUD para la tabla Turno."""
 
     def agregar(self, turno: Turno):
-        self.ejecutar("""
+        turno.id_turno = self.ejecutar("""
             INSERT INTO Turno (id_cancha, fecha, hora_inicio, hora_fin, estado)
             VALUES (?, ?, ?, ?, ?)
         """, (turno.id_cancha, turno.fecha, turno.hora_inicio, turno.hora_fin, turno.estado))
-        turno.id_turno = self.cursor.lastrowid
         return turno
 
     def listar_todos(self):

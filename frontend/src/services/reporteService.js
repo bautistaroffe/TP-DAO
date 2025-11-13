@@ -31,11 +31,12 @@ export async function getCanchasMasUsadas(top = 5) {
   return await res.json();
 }
 
-export async function getUtilizacionMensual(año, mes = null) {
+export async function getUtilizacionMensual(anio, mes = null) {
   const url = mes
-    ? `${API_URL}/utilizacion-mensual?año=${año}&mes=${mes}`
-    : `${API_URL}/utilizacion-mensual?año=${año}`;
+    ? `${API_URL}/utilizacion-mensual?anio=${anio}&mes=${mes}`
+    : `${API_URL}/utilizacion-mensual?anio=${anio}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error al obtener utilización mensual");
   return await res.json();
 }
+

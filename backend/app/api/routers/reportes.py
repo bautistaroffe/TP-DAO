@@ -61,12 +61,13 @@ def reporte_canchas_mas_usadas(
 # ============================
 @router.get("/utilizacion-mensual", summary="Utilización mensual de canchas")
 def reporte_utilizacion_mensual(
-    año: int = Query(..., description="Año a consultar (ejemplo: 2025)"),
+    anio: int = Query(..., description="Año a consultar (ejemplo: 2025)"),
     mes: int | None = Query(None, description="Mes opcional (1-12). Si se omite, devuelve todo el año.")
 ):
     try:
-        return service.generar_reporte_utilizacion_mensual(año=año, mes=mes)
+        return service.generar_reporte_utilizacion_mensual(anio=anio, mes=mes)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
