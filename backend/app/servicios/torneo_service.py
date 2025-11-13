@@ -12,6 +12,20 @@ from backend.app.repositorios.adicional_repo import ServicioAdicionalRepository
 
 class TorneoService:
     # ============================
+    # MAPEO
+    # ============================
+    def _mapear_a_dto(self, torneo: Torneo) -> TorneoDTO:
+        data = {
+            "id_torneo": torneo.id_torneo,
+            "nombre": torneo.nombre,
+            "categoria": torneo.categoria,
+            "fecha_inicio": torneo.fecha_inicio,
+            "fecha_fin": torneo.fecha_fin,
+            "estado": torneo.estado
+        }
+        return TorneoDTO(**data)
+
+    # ============================
     # VALIDACIONES
     # ============================
     def _validar_campos(self, nombre: str, fecha_inicio=None, fecha_fin=None):
@@ -20,10 +34,10 @@ class TorneoService:
         if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
             raise ValueError("La fecha de inicio no puede ser posterior a la fecha de fin.")
 
-    # ---------- ABM Torneo ----------
+    # ---------- ABM Torneo (Operaciones atómicas por defecto) ----------
     def crear_torneo(self, nombre: str, categoria: str = None,
                      fecha_inicio: date = None, fecha_fin: date = None,
-                     estado: str = "programado") -> Torneo:
+                     estado: str = "programado") -> TorneoDTO:
         self._validar_campos(nombre, fecha_inicio, fecha_fin)
         torneo = Torneo(
             nombre=nombre.strip(),
@@ -32,69 +46,54 @@ class TorneoService:
             fecha_fin=fecha_fin,
             estado=estado
         )
-
         repo = TorneoRepository()
-        try:
-            repo.agregar(torneo)
-            repo.commit()
-            return torneo
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        repo.agregar(torneo)
+        return self._mapear_a_dto(torneo)
 
-    def obtener_por_id(self, id_torneo):
+    def obtener_por_id(self, id_torneo) -> TorneoDTO:
         repo = TorneoRepository()
-        try:
-            return repo.obtener_por_id(id_torneo)
-        finally:
-            repo.cerrar()
+        torneo = repo.obtener_por_id(id_torneo)
+        if not torneo:
+            raise ValueError("Torneo no encontrado.")
+        return self._mapear_a_dto(torneo)
 
     def listar_todos(self) -> list[TorneoDTO]:
         repo = TorneoRepository()
-        try:
-            torneos: list[Torneo] = repo.listar_todos()
-            torneos_dto: list[TorneoDTO] = [
-                self._mapear_a_dto(torneo)
-                for torneo in torneos if torneo
-            ]
-            return torneos_dto
-        finally:
-            repo.cerrar()
+        torneos: list[Torneo] = repo.listar_todos()
+        torneos_dto: list[TorneoDTO] = [
+            self._mapear_a_dto(torneo)
+            for torneo in torneos if torneo
+        ]
+        return torneos_dto
 
-    def actualizar_torneo(self, torneo: Torneo):
+    def actualizar_torneo(self, torneo: Torneo) -> TorneoDTO:
         self._validar_campos(torneo.nombre, torneo.fecha_inicio, torneo.fecha_fin)
         repo = TorneoRepository()
-        try:
-            repo.actualizar(torneo)
-            repo.commit()
-            return torneo
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        repo.actualizar(torneo)
+        return self._mapear_a_dto(torneo)
 
     def eliminar_torneo(self, id_torneo):
         repo = TorneoRepository()
-        try:
-            repo.eliminar(id_torneo)
-            repo.commit()
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        repo.eliminar(id_torneo)
+        return {"mensaje": f"Torneo {id_torneo} eliminado correctamente."}
 
-    # ---------- CANCELAR TORNEO ----------
-    def cancelar_torneo(self, id_torneo, cancelar_reservas=True):
+    # ---------- CANCELAR TORNEO (Transacción) ----------
+    def cancelar_torneo(self, id_torneo, cancelar_reservas=True) -> TorneoDTO:
         repo_torneo = TorneoRepository()
         repo_reserva = ReservaRepository()
         repo_turno = TurnoRepository()
 
+        # Iniciar una transacción para asegurar que todas las cancelaciones sean atómicas
+        repo_torneo.iniciar_transaccion()
         try:
+            # 1. Obtener y verificar el torneo
+            torneo = repo_torneo.obtener_por_id(id_torneo)
+            if not torneo:
+                raise ValueError("Torneo no encontrado.")
+
+            # 2. Cancelar reservas asociadas
             if cancelar_reservas:
+                # Nota: Las lecturas dentro de una transacción usan la misma conexión si no se cierran explícitamente.
                 filas = repo_reserva.obtener_todos(
                     "SELECT * FROM Reserva WHERE id_torneo=? AND estado IN ('pendiente','confirmada')",
                     (id_torneo,)
@@ -104,57 +103,48 @@ class TorneoService:
                     r.estado = "cancelada"
                     repo_reserva.actualizar(r)
                     if r.id_turno:
-                        repo_turno.marcar_como_disponible(r.id_turno)
-                repo_reserva.commit()
+                        repo_turno.marcar_como_disponible(r.id_turno)  # UPDATE de turno
 
-            torneo = repo_torneo.obtener_por_id(id_torneo)
-            if not torneo:
-                raise ValueError("Torneo no encontrado.")
+            # 3. Cancelar el torneo
             torneo.estado = "cancelado"
-            repo_torneo.actualizar(torneo)
-            repo_torneo.commit()
-            return torneo
-        except Exception:
-            repo_reserva.rollback()
-            repo_torneo.rollback()
-            raise
-        finally:
-            repo_reserva.cerrar()
-            repo_turno.cerrar()
-            repo_torneo.cerrar()
+            repo_torneo.actualizar(torneo)  # UPDATE de torneo
+
+            # 4. Confirmar transacción
+            repo_torneo.confirmar_transaccion()
+            return self._mapear_a_dto(torneo)
+
+        except Exception as e:
+            # 5. Revertir transacción si hay un fallo
+            repo_torneo.revertir_transaccion()
+            raise e
 
     # ---------- HELPERS ----------
-    def _turno_disponible(self, id_cancha, id_turno, reserva_repo: ReservaRepository = None) -> bool:
-        repo_local = False
-        if reserva_repo is None:
-            reserva_repo = ReservaRepository()
-            repo_local = True
-        try:
-            filas = reserva_repo.obtener_todos(
-                "SELECT * FROM Reserva WHERE id_cancha=? AND id_turno=? AND estado IN ('pendiente', 'confirmada')",
-                (id_cancha, id_turno)
-            )
-            return len(filas) == 0
-        finally:
-            if repo_local:
-                reserva_repo.cerrar()
+    def _turno_disponible(self, id_cancha, id_turno) -> bool:
+        """Verifica si un turno específico en una cancha específica ya tiene una reserva activa."""
+        repo_reserva = ReservaRepository()
+        filas = repo_reserva.obtener_todos(
+            "SELECT * FROM Reserva WHERE id_cancha=? AND id_turno=? AND estado IN ('pendiente', 'confirmada')",
+            (id_cancha, id_turno)
+        )
+        return len(filas) == 0
 
-    # ---------- RESERVAS DE TORNEO ----------
+    # ---------- RESERVAS DE TORNEO (Transacciones) ----------
     def crear_reserva_para_torneo(self, id_torneo, id_cancha, id_turno,
-                                  id_cliente, id_servicio=None, origen="torneo"):
-        return self.crear_reservas_para_torneo(id_torneo, [{
+                                  id_cliente, id_servicio=None, origen="torneo") -> Reserva:
+        # Se reutiliza la lógica del método de lote para la validación y creación.
+        # Devuelve el objeto de dominio Reserva
+        reservas_creadas = self.crear_reservas_para_torneo(id_torneo, [{
             "id_cancha": id_cancha,
             "id_turno": id_turno,
             "id_cliente": id_cliente,
             "id_servicio": id_servicio,
             "origen": origen
-        }])[0]
+        }])
+        return reservas_creadas[0]
 
-    def crear_reservas_para_torneo(self, id_torneo, reservas: list):
+    def crear_reservas_para_torneo(self, id_torneo, reservas: list) -> list[Reserva]:
         repo_torneo = TorneoRepository()
         torneo = repo_torneo.obtener_por_id(id_torneo)
-        repo_torneo.cerrar()
-
         if not torneo:
             raise ValueError("Torneo no encontrado.")
 
@@ -163,7 +153,10 @@ class TorneoService:
         repo_cancha = CanchaRepository()
         repo_servicio = ServicioAdicionalRepository()
 
+        # 1. Iniciar transacción
+        repo_reserva.iniciar_transaccion()
         creadas = []
+
         try:
             for r in reservas:
                 id_cancha = r["id_cancha"]
@@ -172,11 +165,15 @@ class TorneoService:
                 id_servicio = r.get("id_servicio")
                 origen = r.get("origen", "torneo")
 
-                if not self._turno_disponible(id_cancha, id_turno, repo_reserva):
+                # Las validaciones de disponibilidad se hacen con lecturas atómicas (fuera de la transacción iniciada)
+                if not self._turno_disponible(id_cancha, id_turno):
                     raise ValueError(f"Turno {id_turno} en cancha {id_cancha} no disponible.")
 
                 cancha = repo_cancha.obtener_por_id(id_cancha)
                 servicio = repo_servicio.obtener_por_id(id_servicio) if id_servicio else None
+
+                if not cancha:
+                    raise ValueError(f"Cancha {id_cancha} no encontrada.")
 
                 reserva = Reserva(
                     id_cancha=id_cancha,
@@ -189,25 +186,28 @@ class TorneoService:
                 )
 
                 reserva.calcular_costo_reserva(cancha, servicio)
-                repo_reserva.agregar(reserva)
-                repo_turno.marcar_como_reservado(id_turno)
+
+                # Escrituras dentro de la transacción
+                repo_reserva.agregar(reserva)  # INSERT de reserva
+                repo_turno.marcar_como_reservado(id_turno)  # UPDATE de turno
 
                 creadas.append(reserva)
 
-            repo_reserva.commit()
+            # 2. Confirmar si todo fue exitoso
+            repo_reserva.confirmar_transaccion()
             return creadas
-        except Exception:
-            repo_reserva.rollback()
-            raise
-        finally:
-            repo_reserva.cerrar()
-            repo_turno.cerrar()
-            repo_cancha.cerrar()
-            repo_servicio.cerrar()
+        except Exception as e:
+            # 3. Revertir en caso de fallo
+            repo_reserva.revertir_transaccion()
+            raise e
 
     def cancelar_reserva_del_torneo(self, id_torneo, id_reserva):
         repo_reserva = ReservaRepository()
         repo_turno = TurnoRepository()
+
+        # 1. Iniciar transacción
+        repo_reserva.iniciar_transaccion()
+
         try:
             reserva = repo_reserva.obtener_por_id(id_reserva)
             if not reserva:
@@ -218,23 +218,27 @@ class TorneoService:
                 raise ValueError("Solo se pueden cancelar reservas pendientes o confirmadas.")
 
             reserva.estado = "cancelada"
-            repo_reserva.actualizar(reserva)
+            # Escrituras dentro de la transacción
+            repo_reserva.actualizar(reserva)  # UPDATE de reserva
             if reserva.id_turno:
-                repo_turno.marcar_como_disponible(reserva.id_turno)
-            repo_reserva.commit()
-        except Exception:
-            repo_reserva.rollback()
-            raise
-        finally:
-            repo_reserva.cerrar()
-            repo_turno.cerrar()
+                repo_turno.marcar_como_disponible(reserva.id_turno)  # UPDATE de turno
+
+            # 2. Confirmar transacción
+            repo_reserva.confirmar_transaccion()
+        except Exception as e:
+            # 3. Revertir
+            repo_reserva.revertir_transaccion()
+            raise e
 
     def modificar_reserva_del_torneo(self, id_torneo, id_reserva,
-                                     nuevo_id_turno=None, nuevo_id_servicio=None, nuevo_id_cliente=None):
+                                     nuevo_id_turno=None, nuevo_id_servicio=None, nuevo_id_cliente=None) -> Reserva:
         repo_reserva = ReservaRepository()
         repo_turno = TurnoRepository()
         repo_cancha = CanchaRepository()
         repo_servicio = ServicioAdicionalRepository()
+
+        # 1. Iniciar transacción
+        repo_reserva.iniciar_transaccion()
 
         try:
             reserva = repo_reserva.obtener_por_id(id_reserva)
@@ -247,11 +251,14 @@ class TorneoService:
 
             # Cambiar turno
             if nuevo_id_turno and nuevo_id_turno != reserva.id_turno:
-                if not self._turno_disponible(reserva.id_cancha, nuevo_id_turno, repo_reserva):
+                # La disponibilidad se verifica con una lectura atómica (fuera de la transacción)
+                if not self._turno_disponible(reserva.id_cancha, nuevo_id_turno):
                     raise ValueError("El nuevo turno no está disponible.")
+
+                # Escrituras dentro de la transacción
                 if reserva.id_turno:
-                    repo_turno.marcar_como_disponible(reserva.id_turno)
-                repo_turno.marcar_como_reservado(nuevo_id_turno)
+                    repo_turno.marcar_como_disponible(reserva.id_turno)  # UPDATE turno viejo
+                repo_turno.marcar_como_reservado(nuevo_id_turno)  # UPDATE turno nuevo
                 reserva.id_turno = nuevo_id_turno
 
             # Cambiar servicio y cliente
@@ -260,31 +267,18 @@ class TorneoService:
             if nuevo_id_cliente is not None:
                 reserva.id_cliente = nuevo_id_cliente
 
+            # Lecturas atómicas para recalcular costo
             cancha = repo_cancha.obtener_por_id(reserva.id_cancha)
             servicio = repo_servicio.obtener_por_id(reserva.id_servicio) if reserva.id_servicio else None
             reserva.calcular_costo_reserva(cancha, servicio)
 
+            # Actualizar reserva dentro de la transacción
             repo_reserva.actualizar(reserva)
-            repo_reserva.commit()
+
+            # 2. Confirmar transacción
+            repo_reserva.confirmar_transaccion()
             return reserva
-        except Exception:
-            repo_reserva.rollback()
-            raise
-        finally:
-            repo_reserva.cerrar()
-            repo_turno.cerrar()
-            repo_cancha.cerrar()
-            repo_servicio.cerrar()
-
-    def _mapear_a_dto(self, torneo:Torneo) -> TorneoDTO:
-        data = {
-            "id_torneo": torneo.id_torneo,
-            "nombre": torneo.nombre,
-            "categoria": torneo.categoria,
-            "fecha_inicio": torneo.fecha_inicio,
-            "fecha_fin": torneo.fecha_fin,
-            "estado": torneo.estado
-        }
-
-
-        return TorneoDTO(**data)
+        except Exception as e:
+            # 3. Revertir
+            repo_reserva.revertir_transaccion()
+            raise e

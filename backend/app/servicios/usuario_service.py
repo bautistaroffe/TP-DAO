@@ -2,12 +2,29 @@ import re
 
 from backend.app.dominio.usuario import Usuario
 from backend.app.repositorios.usuario_repo import UsuarioRepository
-from backend.app.repositorios.reserva_repo import ReservaRepository
-from backend.app.repositorios.pago_repo import PagoRepository
+from backend.app.repositorios.reserva_repo import \
+    ReservaRepository  # Asumiendo que ReservaRepository hereda de BaseRepository
+from backend.app.repositorios.pago_repo import PagoRepository  # Asumiendo que PagoRepository hereda de BaseRepository
 from backend.app.dto.usuario_dto import UsuarioDTO
 
 
 class UsuarioService:
+
+    # ============================
+    # MAPEO
+    # ============================
+    def _mapear_a_dto(self, usuario: Usuario) -> UsuarioDTO:
+        data = {
+            "id_usuario": usuario.id_usuario,
+            "dni": usuario.dni,
+            "nombre": usuario.nombre,
+            "apellido": usuario.apellido,
+            "telefono": usuario.telefono,
+            "email": usuario.email,
+            "estado": usuario.estado
+        }
+        return UsuarioDTO(**data)
+
     # ============================
     # VALIDACIONES
     # ============================
@@ -39,136 +56,106 @@ class UsuarioService:
         )
 
         repo = UsuarioRepository()
-        try:
-            # verificar duplicado
-            existentes = [u for u in repo.listar_todos() if u.dni == dni]
-            if existentes:
-                raise ValueError("Ya existe un usuario con ese DNI.")
 
-            repo.agregar(usuario)
-            repo.commit()
-            return usuario
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # Verificar duplicado (lectura atómica)
+        # Nota: Idealmente, usar obtener_por_dni para mayor eficiencia.
+        existentes = [u for u in repo.listar_todos() if u and str(u.dni) == str(dni)]
+        if existentes:
+            raise ValueError("Ya existe un usuario con ese DNI.")
+
+        # Escribir (operación atómica)
+        repo.agregar(usuario)
+        return self._mapear_a_dto(usuario)
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_usuarios(self) -> list[UsuarioDTO]:
         repo = UsuarioRepository()
-        try:
-            usuarios: list[Usuario] = repo.listar_todos()
+        # Lectura atómica
+        usuarios: list[Usuario] = repo.listar_todos()
 
-            usuarios_dto: list[UsuarioDTO] = [
-                self._mapear_a_dto(usuario)
-                for usuario in usuarios if usuario
-            ]
-            return usuarios_dto
-        finally:
-            repo.cerrar()
+        # Mapear a DTO
+        usuarios_dto: list[UsuarioDTO] = [
+            self._mapear_a_dto(usuario)
+            for usuario in usuarios if usuario
+        ]
+        return usuarios_dto
 
     def obtener_usuario_por_id(self, id_usuario):
         repo = UsuarioRepository()
-        try:
-            usuario = repo.obtener_por_id(id_usuario)
-            if not usuario:
-                raise ValueError("Usuario no encontrado.")
-            return usuario
-        finally:
-            repo.cerrar()
+        # Lectura atómica
+        usuario = repo.obtener_por_id(id_usuario)
+        if not usuario:
+            raise ValueError("Usuario no encontrado.")
+        # Mapear a DTO
+        return self._mapear_a_dto(usuario)
 
     # ============================
     # ACTUALIZAR USUARIO
     # ============================
     def actualizar_usuario(self, id_usuario, **datos_actualizados):
         repo = UsuarioRepository()
-        try:
-            usuario = repo.obtener_por_id(id_usuario)
-            if not usuario:
-                raise ValueError("Usuario no encontrado.")
 
-            # Validar nuevos datos
-            self._validar_campos(
-                dni=datos_actualizados.get("dni", usuario.dni),
-                nombre=datos_actualizados.get("nombre", usuario.nombre),
-                apellido=datos_actualizados.get("apellido", usuario.apellido),
-                email=datos_actualizados.get("email", usuario.email),
-                telefono=datos_actualizados.get("telefono", usuario.telefono)
-            )
+        # Lectura atómica
+        usuario = repo.obtener_por_id(id_usuario)
+        if not usuario:
+            raise ValueError("Usuario no encontrado.")
 
-            # Actualizar campos válidos
-            for campo, valor in datos_actualizados.items():
-                if hasattr(usuario, campo):
-                    setattr(usuario, campo, valor)
+        # Validar nuevos datos (usando valores actuales como fallback)
+        self._validar_campos(
+            dni=datos_actualizados.get("dni", usuario.dni),
+            nombre=datos_actualizados.get("nombre", usuario.nombre),
+            apellido=datos_actualizados.get("apellido", usuario.apellido),
+            email=datos_actualizados.get("email", usuario.email),
+            telefono=datos_actualizados.get("telefono", usuario.telefono)
+        )
 
-            repo.actualizar(usuario)
-            repo.commit()
-            return usuario
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # Actualizar campos válidos en el objeto de dominio
+        for campo, valor in datos_actualizados.items():
+            if hasattr(usuario, campo):
+                setattr(usuario, campo, valor)
+
+        # Escribir (operación atómica)
+        repo.actualizar(usuario)
+        # Mapear a DTO
+        return self._mapear_a_dto(usuario)
 
     # ============================
     # ELIMINAR USUARIO (segura)
     # ============================
     def eliminar_usuario(self, id_usuario):
         """
-        Si el usuario tiene pagos o reservas asociadas:
-            → No se elimina físicamente.
-            → Se marca como inactivo y se informa.
-        Si no tiene registros → se elimina.
+        Si el usuario tiene pagos o reservas asociadas, se marca como inactivo.
+        Si no tiene registros, se elimina.
         """
         repo_usuario = UsuarioRepository()
         repo_reserva = ReservaRepository()
         repo_pago = PagoRepository()
 
-        try:
-            usuario = repo_usuario.obtener_por_id(id_usuario)
-            if not usuario:
-                raise ValueError("Usuario no encontrado.")
+        # 1. Verificar existencia (lectura atómica)
+        usuario = repo_usuario.obtener_por_id(id_usuario)
+        if not usuario:
+            raise ValueError("Usuario no encontrado.")
 
-            reservas = repo_reserva.obtener_todos(
-                "SELECT * FROM Reserva WHERE id_cliente=?", (id_usuario,)
-            )
-            pagos = repo_pago.obtener_todos(
-                "SELECT * FROM Pago WHERE id_usuario=?", (id_usuario,)
-            )
+        # 2. Verificar dependencias (lecturas atómicas)
+        reservas = repo_reserva.obtener_todos(
+            "SELECT * FROM Reserva WHERE id_cliente=?", (id_usuario,)
+        )
+        pagos = repo_pago.obtener_todos(
+            "SELECT * FROM Pago WHERE id_usuario=?", (id_usuario,)
+        )
 
-            if reservas or pagos:
-                usuario.estado = "inactivo"
-                repo_usuario.actualizar(usuario)
-                repo_usuario.commit()
-                return {
-                    "mensaje": f"Usuario {id_usuario} marcado como inactivo: tenía reservas o pagos asociados.",
-                    "usuario": usuario.__dict__
-                }
+        if reservas or pagos:
+            # 3. Marcar como inactivo (escritura atómica)
+            usuario.estado = "inactivo"
+            repo_usuario.actualizar(usuario)
+            return {
+                "mensaje": f"Usuario {id_usuario} marcado como inactivo: tenía reservas o pagos asociados.",
+                # Mapear a DTO
+                "usuario": self._mapear_a_dto(usuario)
+            }
 
-            repo_usuario.eliminar(id_usuario)
-            repo_usuario.commit()
-            return {"mensaje": f"Usuario {id_usuario} eliminado correctamente."}
-
-        except Exception:
-            repo_usuario.rollback()
-            raise
-        finally:
-            repo_usuario.cerrar()
-            repo_reserva.cerrar()
-            repo_pago.cerrar()
-
-    def _mapear_a_dto(self, usuario: Usuario) -> UsuarioDTO:
-        data = {
-            "id_usuario": usuario.id_usuario,
-            "dni": usuario.dni,
-            "nombre": usuario.nombre,
-            "apellido": usuario.apellido,
-            "telefono": usuario.telefono,
-            "email": usuario.email,
-            "estado": usuario.estado
-        }
-
-        return UsuarioDTO(**data)
+        # 4. Eliminar físicamente (escritura atómica)
+        repo_usuario.eliminar(id_usuario)
+        return {"mensaje": f"Usuario {id_usuario} eliminado correctamente."}

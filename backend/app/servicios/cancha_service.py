@@ -1,8 +1,10 @@
 from backend.app.dominio.cancha_futbol import CanchaFutbol
 from backend.app.dominio.cancha_basquet import CanchaBasquet
 from backend.app.dominio.cancha_padel import CanchaPadel
+# Nota: La ruta del repositorio debe ser correcta en tu proyecto
 from backend.app.repositorios.cancha_repo import CanchaRepository
-from backend.app.repositorios.reserva_repo import ReservaRepository
+from backend.app.repositorios.reserva_repo import \
+    ReservaRepository  # Asumiendo que ReservaRepository hereda de BaseRepository
 from backend.app.dto.cancha_dto import CanchaDTO
 from backend.app.dominio.cancha import Cancha
 
@@ -10,15 +12,18 @@ from backend.app.dominio.cancha import Cancha
 class CanchaService:
 
     # ============================
-    # VALIDACIONES
+    # Mapeo y Validaciones
     # ============================
+
     def _validar_campos(self, nombre, precio_base):
+        """Valida campos básicos de la cancha."""
         if not nombre or not nombre.strip():
             raise ValueError("El nombre de la cancha es obligatorio.")
         if precio_base is None or precio_base < 0:
             raise ValueError("El precio base debe ser un número positivo.")
 
     def _instanciar_cancha(self, tipo, **kwargs):
+        """Instancia el objeto de dominio correcto según el tipo."""
         tipo = tipo.lower()
         if tipo == "futbol":
             return CanchaFutbol(**kwargs)
@@ -28,6 +33,21 @@ class CanchaService:
             return CanchaPadel(**kwargs)
         else:
             raise ValueError(f"Tipo de cancha desconocido: {tipo}")
+
+    def _mapear_a_dto(self, cancha: Cancha) -> CanchaDTO:
+        """Convierte un objeto de dominio Cancha en un DTO."""
+        data = {
+            "id_cancha": cancha.id_cancha,
+            "nombre": cancha.nombre,
+            "tipo": cancha.tipo,
+            "estado": cancha.estado,
+            "precio_base": cancha.precio_base,
+            "techada": cancha.techada,
+            "iluminacion": cancha.iluminacion,
+            "superficie": getattr(cancha, "superficie", None),
+            "tamaño": getattr(cancha, "tamaño", None)
+        }
+        return CanchaDTO(**data)
 
     # ============================
     # CREAR CANCHA
@@ -44,68 +64,53 @@ class CanchaService:
         )
 
         repo = CanchaRepository()
-        try:
-            repo.agregar(cancha)
-            repo.commit()
-            return self._mapear_a_dto(cancha)
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        # El repo.agregar ya ejecuta el INSERT y hace el commit de forma atómica.
+        repo.agregar(cancha)
+        return self._mapear_a_dto(cancha)
 
     # ============================
     # OBTENER / LISTAR
     # ============================
     def listar_canchas(self):
         repo = CanchaRepository()
-        try:
-            return repo.listar_todas()
-        finally:
-            repo.cerrar()
+        # Retornamos DTOs para mantener la consistencia en el servicio
+        canchas = repo.listar_todas()
+        return [self._mapear_a_dto(c) for c in canchas if c]
 
     def obtener_cancha_por_id(self, id_cancha):
         repo = CanchaRepository()
-        try:
-            cancha = repo.obtener_por_id(id_cancha)
-            if not cancha:
-                raise ValueError("Cancha no encontrada.")
-            return self._mapear_a_dto(cancha)
-        finally:
-            repo.cerrar()
+        cancha = repo.obtener_por_id(id_cancha)
+        if not cancha:
+            raise ValueError("Cancha no encontrada.")
+        return self._mapear_a_dto(cancha)
 
     def obtener_canchas_por_tipo(self, tipo):
         repo = CanchaRepository()
-        try:
-            return repo.obtener_por_tipo(tipo)
-        finally:
-            repo.cerrar()
+        # Retornamos DTOs para mantener la consistencia
+        canchas = repo.obtener_por_tipo(tipo)
+        return [self._mapear_a_dto(c) for c in canchas if c]
 
     # ============================
     # ACTUALIZAR
     # ============================
     def actualizar_cancha(self, id_cancha, **datos_actualizados):
         repo = CanchaRepository()
-        try:
-            cancha = repo.obtener_por_id(id_cancha)
-            if not cancha:
-                raise ValueError("Cancha no encontrada.")
 
-            if "precio_base" in datos_actualizados and datos_actualizados["precio_base"] < 0:
-                raise ValueError("El precio base no puede ser negativo.")
+        cancha = repo.obtener_por_id(id_cancha)
+        if not cancha:
+            raise ValueError("Cancha no encontrada.")
 
-            for campo, valor in datos_actualizados.items():
-                if hasattr(cancha, campo):
-                    setattr(cancha, campo, valor)
+        if "precio_base" in datos_actualizados and datos_actualizados["precio_base"] < 0:
+            raise ValueError("El precio base no puede ser negativo.")
 
-            repo.actualizar(cancha)
-            repo.commit()
-            return self._mapear_a_dto(cancha)
-        except Exception:
-            repo.rollback()
-            raise
-        finally:
-            repo.cerrar()
+        for campo, valor in datos_actualizados.items():
+            # Asignamos el valor solo si el atributo existe en la instancia de la cancha
+            if hasattr(cancha, campo):
+                setattr(cancha, campo, valor)
+
+        # El repo.actualizar ya ejecuta el UPDATE y hace el commit de forma atómica.
+        repo.actualizar(cancha)
+        return self._mapear_a_dto(cancha)
 
     # ============================
     # ELIMINAR
@@ -113,35 +118,22 @@ class CanchaService:
     def eliminar_cancha(self, id_cancha):
         repo_cancha = CanchaRepository()
         repo_reserva = ReservaRepository()
-        try:
-            cancha = repo_cancha.obtener_por_id(id_cancha)
-            if not cancha:
-                raise ValueError("Cancha no encontrada.")
 
-            reservas = repo_reserva.obtener_todos(
-                "SELECT * FROM Reserva WHERE id_cancha=? AND estado IN ('pendiente', 'confirmada')",
-                (id_cancha,)
-            )
+        # 1. Verificar existencia
+        cancha = repo_cancha.obtener_por_id(id_cancha)
+        if not cancha:
+            raise ValueError("Cancha no encontrada.")
 
-            if reservas:
-                raise ValueError("No se puede eliminar la cancha porque tiene reservas activas o pendientes.")
+        # 2. Verificar reservas activas/pendientes (lectura)
+        reservas = repo_reserva.obtener_todos(
+            "SELECT * FROM Reserva WHERE id_cancha=? AND estado IN ('pendiente', 'confirmada')",
+            (id_cancha,)
+        )
 
-            repo_cancha.eliminar(id_cancha)
-            repo_cancha.commit()
-            return {"mensaje": f"Cancha {id_cancha} eliminada correctamente."}
+        if reservas:
+            raise ValueError("No se puede eliminar la cancha porque tiene reservas activas o pendientes.")
 
-        except Exception:
-            repo_cancha.rollback()
-            raise
-        finally:
-            repo_cancha.cerrar()
-            repo_reserva.cerrar()
+        # 3. Eliminar (escritura atómica)
+        repo_cancha.eliminar(id_cancha)
 
-    def _mapear_a_dto(self, cancha:Cancha) -> CanchaDTO:
-        data = {"id_cancha": cancha.id_cancha, "nombre": cancha.nombre, "tipo": cancha.tipo, "estado": cancha.estado,
-                "precio_base": cancha.precio_base, "techada": cancha.techada, "iluminacion": cancha.iluminacion,
-                "superficie": getattr(cancha, "superficie", None), "tamaño": getattr(cancha, "tamaño", None)}
-
-        return CanchaDTO(**data)
-
-
+        return {"mensaje": f"Cancha {id_cancha} eliminada correctamente."}
