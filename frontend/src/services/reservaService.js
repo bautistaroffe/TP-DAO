@@ -1,5 +1,17 @@
 const API_BASE_URL = "http://localhost:8000/api/reservas";
 
+/**
+ * Intenta extraer un mensaje de error detallado del cuerpo de la respuesta HTTP.
+ */
+const getErrorDetail = async (response) => {
+    try {
+        const errorData = await response.json();
+        return errorData.detail || errorData.message || response.statusText;
+    } catch {
+        return response.statusText;
+    }
+};
+
 export const reservaService = {
 
   async obtenerReservas() {
@@ -28,8 +40,9 @@ export const reservaService = {
       throw error;
     }
   },
+
   async eliminarReserva(id_reserva) {
-    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_reserva}`);
+    console.log(`[SERVICE] Llamando a DELETE para Reserva ID: ${id_reserva}`);
 
     const response = await fetch(`${API_BASE_URL}/${id_reserva}`, { method: 'DELETE' });
 
@@ -39,7 +52,32 @@ export const reservaService = {
     }
 
     return true; // Éxito en la eliminación
-  }
+  },
 
-  // Aquí podrías agregar más métodos.
+  /**
+   * Crea una nueva reserva. Este método es requerido por ReservaForm.jsx.
+   * @param {object} datosNuevaReserva Payload con id_cancha, id_turno, id_cliente.
+   * @returns {Promise<object>} Objeto de reserva creada.
+   */
+  async crearReserva(datosNuevaReserva) {
+    console.log(`[SERVICE] Llamando a POST en ${API_BASE_URL} con payload:`, datosNuevaReserva);
+
+    const response = await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(datosNuevaReserva),
+    });
+
+    if (!response.ok) {
+      const errorDetail = await getErrorDetail(response);
+      throw new Error(errorDetail || `Error en el servidor al intentar crear la reserva.`);
+    }
+
+    try {
+      return await response.json();
+    } catch (e) {
+      console.warn(`Operación POST exitosa pero falló la lectura del JSON de respuesta. Asumiendo éxito.`, e);
+      return {};
+    }
+  },
 };

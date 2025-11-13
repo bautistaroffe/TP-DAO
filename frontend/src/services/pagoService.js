@@ -1,45 +1,65 @@
 const API_BASE_URL = "http://localhost:8000/api/pagos";
 
+/**
+ * Intenta extraer un mensaje de error detallado del cuerpo de la respuesta HTTP.
+ */
+const getErrorDetail = async (response) => {
+    try {
+        const errorData = await response.json();
+        return errorData.detail || errorData.message || response.statusText;
+    } catch {
+        return response.statusText;
+    }
+};
+
 export const pagoService = {
 
-  async obtenerPagos() {
-    console.log(`Intentando obtener pagos desde: ${API_BASE_URL}`);
+    async obtenerPagos() {
+        console.log(`Intentando obtener pagos desde: ${API_BASE_URL}`);
+        try {
+            const response = await fetch(API_BASE_URL);
+            if (!response.ok) {
+                const errorDetail = await response.text();
+                throw new Error(`Error en el servidor (${response.status} ${response.statusText}): ${errorDetail}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Fallo al obtener la lista de pagos:", error);
+            throw error;
+        }
+    },
 
-    try {
-      // 1. Realizar la solicitud HTTP GET
-      const response = await fetch(API_BASE_URL);
+    /**
+     * Procesa un pago para una reserva. Esto finaliza la reserva y la marca como pagada/confirmada.
+     * @param {Object} datosPago Datos del pago (ej: id_reserva, monto, metodo_pago, fecha_pago).
+     * @returns {Promise<Object>} El objeto Pago creado.
+     */
+    async procesarPago(datosPago) {
+        console.log(`[SERVICE] Procesando pago para reserva ${datosPago.id_reserva}...`);
 
-      // 2. Verificar el estado de la respuesta
-      if (!response.ok) {
-        // Si el estado es 4xx o 5xx, lanzamos un error con más detalle
-        const errorDetail = await response.text(); // Intentamos obtener el cuerpo del error
-        throw new Error(`Error en el servidor (${response.status} ${response.statusText}): ${errorDetail}`);
-      }
+        const response = await fetch(API_BASE_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(datosPago),
+        });
 
-      // 3. Convertir la respuesta a JSON
-      const pagos = await response.json();
+        if (!response.ok) {
+            const errorDetail = await getErrorDetail(response);
+            throw new Error(errorDetail || `Error al procesar el pago.`);
+        }
 
-      // 4. Devolver los datos (los DTOs)
-      return pagos;
+        // Debería devolver el objeto de Pago creado
+        return await response.json();
+    },
 
-    } catch (error) {
-      console.error("Fallo al obtener la lista de pagos:", error);
-      // Propagamos el error para que el componente de la UI pueda mostrar un mensaje al usuario
-      throw error;
-    }
-  },
-  async eliminarPago(id_pago) {
-    console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_pago}`);
+    async eliminarPago(id_pago) {
+        console.log(`[SERVICE] Llamando a DELETE para Pago ID: ${id_pago}`);
+        const response = await fetch(`${API_BASE_URL}/${id_pago}`, { method: 'DELETE' });
 
-    const response = await fetch(`${API_BASE_URL}/${id_pago}`, { method: 'DELETE' });
-
-    if (!response.ok) {
-        const errorDetail = await response.text();
-        throw new Error(`Error al eliminar el pago: ${response.status} ${response.statusText} - ${errorDetail}`);
-    }
-
-    return true; // Éxito en la eliminación
-  }
-
-  // Aquí podrías agregar más métodos.
+        if (!response.ok) {
+            const errorDetail = await response.text();
+            throw new Error(`Error al eliminar el pago: ${response.status} ${response.statusText} - ${errorDetail}`);
+        }
+        return true;
+    },
 };
