@@ -11,7 +11,7 @@ export async function getReservasPorCliente(idCliente) {
 export async function getReservasPorCancha(idCancha, fechaInicio, fechaFin) {
   const url = `http://127.0.0.1:8000/api/reportes/reservas-cancha?id_cancha=${idCancha}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
 
-  console.log("📡 GET:", url); // 👀 Te muestra la URL completa
+  console.log("📡 GET:", url); //  Te muestra la URL completa
 
   const res = await fetch(url);
 

@@ -28,7 +28,22 @@ export default function ReportesPage() {
   const [topN, setTopN] = useState(5);
   const [año, setAño] = useState(2025);
 
-  const COLORS = ["#134611", "#3E8914", "#A8C686", "#DCE2AA", "#B7CE63"];
+const COLORS = [
+  "#0d1b2a", // Enero - charcoal (muy oscuro)
+  "#142b46", // Febrero - azul carbón
+  "#1e3a8a", // Marzo - marian blue
+  "#2c5282", // Abril - azul acero
+  "#35658f", // Mayo - azul frío
+  "#457b9d", // Junio - cerulean
+  "#5a8eb1", // Julio - azul intermedio
+  "#7baac4", // Agosto - azul grisáceo medio
+  "#98c1d9", // Septiembre - powder blue
+  "#b2d0e0", // Octubre - celeste pálido
+  "#cddde7", // Noviembre - azul muy claro
+  "#E2E8F0"  // Diciembre - alice blue
+];
+
+
 
   // === Funciones por reporte ===
   async function cargarReservasCliente() {
@@ -209,7 +224,7 @@ export default function ReportesPage() {
                   dataKey={
                     modoReservasCliente === "monto" ? "monto" : "cantidad"
                   }
-                  fill="#3E8914"
+                  fill={COLORS[1]}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -347,14 +362,14 @@ export default function ReportesPage() {
                 <XAxis dataKey="cancha" />
                 <YAxis />
                 <Tooltip />
-                {Array.from({ length: 12 }, (_, i) => (
-                  <Bar
-                    key={i}
-                    dataKey={`Mes ${i + 1}`}
-                    stackId="a"
-                    fill={COLORS[i % COLORS.length]}
-                  />
-                ))}
+                  {COLORS.map((color, i) => (
+                      <Bar
+                          key={i}
+                          dataKey={`Mes ${i + 1}`}
+                          stackId="a"
+                          fill={color}
+                      />
+                  ))}
                 <Legend />
               </BarChart>
             </ResponsiveContainer>
