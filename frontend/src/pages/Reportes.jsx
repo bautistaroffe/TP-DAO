@@ -11,6 +11,7 @@ import {
   getReservasPorCancha,
 } from "../services/reporteService";
 import "../styles/pages.css";
+import { generarReportePDF } from "../utils/pdfReportGenerator";
 
 export default function ReportesPage() {
   const [utilizacion, setUtilizacion] = useState([]);
@@ -187,6 +188,23 @@ const COLORS = [
                 />
               </label>
               <button onClick={cargarReservasCliente}>Actualizar</button>
+
+                <button
+                    onClick={() =>
+                        generarReportePDF(
+                            `Reporte de Reservas del Cliente #${idCliente}`,
+                            reservasCliente,
+                            {
+                                autor: "Área Administrativa",
+                                empresa: "CONTROL RISK S.R.L.",
+                                campos: ["cancha", "monto", "cantidad"],
+                            }
+                        )
+                    }
+                >
+                    Ver Reporte
+                </button>
+
             </div>
           </div>
 
@@ -265,6 +283,23 @@ const COLORS = [
                 />
               </label>
               <button onClick={cargarReservasCancha}>Actualizar</button>
+
+                <button
+                    onClick={() =>
+                        generarReportePDF(
+                            `Reservas de la Cancha #${idCancha}`,
+                            reservasCancha,
+                            {
+                                autor: "Área Administrativa",
+                                empresa: "CONTROL RISK S.R.L.",
+                                campos: ["periodo", "reservas"],
+                            }
+                        )
+                    }
+                >
+                    Ver Reporte
+                </button>
+
             </div>
           </div>
 
@@ -301,6 +336,23 @@ const COLORS = [
                 />
               </label>
               <button onClick={cargarCanchasMasUsadas}>Actualizar</button>
+
+                <button
+                    onClick={() =>
+                        generarReportePDF(
+                            `Canchas más utilizadas - Top ${topN}`,
+                            canchasMasUsadas,
+                            {
+                                autor: "Área Administrativa",
+                                empresa: "CONTROL RISK S.R.L.",
+                                campos: ["cancha", "reservas", "porcentaje"],
+                            }
+                        )
+                    }
+                >
+                    Ver Reporte
+                </button>
+
             </div>
           </div>
 
@@ -352,6 +404,23 @@ const COLORS = [
                 />
               </label>
               <button onClick={cargarUtilizacion}>Actualizar</button>
+
+                <button
+                    onClick={() =>
+                        generarReportePDF(
+                            `Utilización mensual de canchas (${año})`,
+                            utilizacion,
+                            {
+                                autor: "Área Administrativa",
+                                empresa: "CONTROL RISK S.R.L.",
+                                campos: Object.keys(utilizacion[0] || {}),
+                            }
+                        )
+                    }
+                >
+                    Ver Reporte
+                </button>
+
             </div>
           </div>
 
