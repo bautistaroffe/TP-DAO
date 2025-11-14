@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ReservaForm from '../components/forms/ReservaForm.jsx'; // 1. Importa el formulario, asumiendo la ruta correcta
+import ReservaForm from '../components/forms/ReservaForm/ReservaForm.jsx'; // 1. Importa el formulario, asumiendo la ruta correcta
 
 // Conviértelo a un componente de función para usar Hooks (useState)
 export default function HomePage() {

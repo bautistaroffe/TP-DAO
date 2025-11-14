@@ -1,6 +1,6 @@
 from backend.app.dominio.turno import Turno
 from backend.app.repositorios.base_repo import BaseRepository
-
+from datetime import date
 class TurnoRepository(BaseRepository):
     """CRUD para la tabla Turno."""
 
@@ -8,7 +8,7 @@ class TurnoRepository(BaseRepository):
         turno.id_turno = self.ejecutar("""
             INSERT INTO Turno (id_cancha, fecha, hora_inicio, hora_fin, estado)
             VALUES (?, ?, ?, ?, ?)
-        """, (turno.id_cancha, turno.fecha, turno.hora_inicio, turno.hora_fin, turno.estado))
+        """, (turno.id_cancha, str(turno.fecha), str(turno.hora_inicio), str(turno.hora_fin), turno.estado))
         return turno
 
     def listar_todos(self):
@@ -45,4 +45,34 @@ class TurnoRepository(BaseRepository):
             WHERE id_turno = ?
         """, (id_turno,))
 
+    def obtener_disponibles_por_cancha(self, id_cancha):
+        """Obtiene solo los turnos con estado 'disponible' para una cancha,
+           desde la fecha actual, ordenados por fecha y hora."""
 
+        fecha_actual = date.today()
+
+        query = f"""
+            SELECT * FROM Turno
+            WHERE 
+                id_cancha = ? 
+                AND estado = 'disponible'
+                -- CRÍTICO: SOLO turnos desde la fecha actual en adelante
+                AND fecha >= '{fecha_actual}'
+            ORDER BY fecha ASC, hora_inicio ASC
+        """
+        # Solo se pasa id_cancha
+        filas = self.obtener_todos(query, (id_cancha,))
+        return [Turno(**dict(f)) for f in filas]
+
+    def obtener_turnos_por_cancha_y_fecha(self, id_cancha, fecha):
+        """Obtiene todos los turnos NO CANCELADOS para una cancha y fecha específica."""
+        query = """
+            SELECT * FROM Turno
+            WHERE 
+                id_cancha = ? 
+                AND fecha = ?
+                AND estado != 'cancelado' 
+        """
+        # Aseguramos que la fecha se pase como string si es necesario para el driver SQLite
+        filas = self.obtener_todos(query, (id_cancha, str(fecha)))
+        return [Turno(**dict(f)) for f in filas]

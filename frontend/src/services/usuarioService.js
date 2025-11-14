@@ -6,10 +6,15 @@ const API_BASE_URL = "http://localhost:8000/api/usuarios";
 const getErrorDetail = async (response) => {
     try {
         const errorData = await response.json();
-        return errorData.detail || errorData.message || response.statusText;
+        // Intentar obtener el detalle de error del backend (FastAPI usa 'detail', otros usan 'message')
+        if (typeof errorData === 'object' && errorData !== null) {
+            return JSON.stringify(errorData) || errorData.detail || errorData.message || response.statusText;
+        }
     } catch {
-        return response.statusText;
+        // Si no se puede parsear como JSON, devolver el texto plano
+        return await response.text();
     }
+    return response.statusText;
 };
 
 export const usuarioService = {
@@ -72,8 +77,7 @@ export const usuarioService = {
 
         if (!response.ok) {
             const errorDetail = await getErrorDetail(response);
-            throw new Error(errorDetail || `Error en el servidor al intentar ${method}.`);
-        }
+            throw new Error(`Error al buscar usuario por DNI (${response.status}): ${errorDetail}`);        }
         try {
             if (response.status !== 204) {
                 return await response.json();

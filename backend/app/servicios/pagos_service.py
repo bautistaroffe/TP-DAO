@@ -40,51 +40,67 @@ class PagoService:
         repo_pago = PagoRepository()
         repo_reserva = ReservaRepository()
 
-        # 1. Validaciones previas (Lecturas atómicas)
         reserva = repo_reserva.obtener_por_id(id_reserva)
         if not reserva:
             raise ValueError("Reserva no encontrada.")
-        if reserva.estado in ("cancelada", "expirada", "pagada"):
+        if reserva.estado in ("cancelada", "expirada", "pagada", "confirmada"):
             raise ValueError(f"No se puede procesar un pago para una reserva en estado '{reserva.estado}'.")
 
-        pago_existente = repo_pago.obtener_por_reserva(id_reserva)
-        if pago_existente:
+        if repo_pago.obtener_por_reserva(id_reserva):
             raise ValueError("Ya existe un pago asociado a esta reserva.")
 
-        # 2. Creación y simulación de pago
+        # ---------------------------------------
+        # NUEVA LÓGICA SEGÚN EL MÉTODO DE PAGO
+        # ---------------------------------------
+        metodo = metodo.strip().lower()
+        if metodo == "efectivo":
+            estado_pago = "pendiente"
+            estado_reserva = "pendiente"
+
+        elif metodo == "mercado_pago":
+            estado_pago = "aprobado"
+            estado_reserva = "confirmada"
+
+        else:
+            raise ValueError("El método de pago debe ser 'efectivo' o 'mercado_pago'.")
+
+        # Crear el pago con el estado ya decidido
         pago = Pago(
             id_usuario=id_usuario,
             id_reserva=id_reserva,
             monto=monto,
             fecha_pago=datetime.now(),
-            metodo=metodo.strip(),
-            estado_transaccion="pendiente"
+            metodo=metodo,
+            estado_transaccion=estado_pago
         )
-        estado = pago.procesarPago() # Simula el intento de pago (ej: "aprobado", "rechazado")
-        pago.estado_transaccion = estado # Actualiza el estado del objeto Pago
 
-        # 3. Iniciar transacción
-        repo_pago.iniciar_transaccion()
+        # ---------------------------------------
+        # TRANSACCIÓN ÚNICA (EVITA LOCKS)
+        # ---------------------------------------
+        repo_reserva.iniciar_transaccion()
         try:
-            # Escrituras dentro de la transacción
+            # Forzar repo_pago a usar la misma conexión
+            repo_pago._conn = repo_reserva._conn
+            repo_pago._cursor = repo_reserva._cursor
+
+            # Guardar el pago
             repo_pago.agregar(pago)
 
-            if estado == "aprobado":
-                reserva.estado = "pagada"
-                repo_reserva.actualizar(reserva)
+            # Actualizar reserva
+            reserva.estado = estado_reserva
+            repo_reserva.actualizar(reserva)
 
-            # 4. Confirmar
-            repo_pago.confirmar_transaccion()
+            # Confirmar todo
+            repo_reserva.confirmar_transaccion()
 
             return {
-                "mensaje": f"Pago procesado correctamente ({estado}).",
+                "mensaje": f"Pago registrado correctamente ({estado_pago}).",
                 "pago": self._mapear_a_dto(pago),
-                "reserva": reserva.__dict__ # Devolvemos el dict de reserva para mostrar su estado actualizado
+                "reserva": reserva.__dict__
             }
 
         except Exception as e:
-            # 5. Revertir
-            repo_pago.revertir_transaccion()
+            repo_reserva.revertir_transaccion()
             raise e
 
     # ============================

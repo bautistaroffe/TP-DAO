@@ -6,9 +6,14 @@ const API_BASE_URL = "http://localhost:8000/api/pagos";
 const getErrorDetail = async (response) => {
     try {
         const errorData = await response.json();
+        // Si el detalle de FastAPI es un objeto complejo (e.g., errores de validación 422), convertirlo a string
+        if (errorData && typeof errorData === 'object') {
+            return JSON.stringify(errorData);
+        }
         return errorData.detail || errorData.message || response.statusText;
     } catch {
-        return response.statusText;
+        // Si el cuerpo no es JSON (ej. error 500 simple), devuelve el texto plano
+        return await response.text();
     }
 };
 

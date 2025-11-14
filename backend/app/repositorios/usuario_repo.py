@@ -28,3 +28,8 @@ class UsuarioRepository(BaseRepository):
 
     def eliminar(self, id_usuario):
         self.ejecutar("DELETE FROM Usuario WHERE id_usuario=?", (id_usuario,))
+
+    def obtener_por_dni(self, dni):
+        # Utiliza un parámetro en la consulta para evitar inyección SQL
+        fila = self.obtener_uno("SELECT * FROM Usuario WHERE dni=?", (dni,))
+        return Usuario(**dict(fila)) if fila else None

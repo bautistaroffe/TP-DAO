@@ -5,15 +5,13 @@ const ESTADOS = ['disponible', 'reservado', 'cancelado'];
 
 const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
 
-    // Modo Edición si idTurno es un valor válido (no null, no undefined)
     const isEditing = !!idTurno;
 
-    // Estado inicial (adaptado al TurnoDTO)
     const [formData, setFormData] = useState({
         id_cancha: 0,
-        fecha: '', // Formato YYYY-MM-DD
-        hora_inicio: '', // Formato HH:MM
-        hora_fin: '', // Formato HH:MM
+        fecha: '', // Usaremos YYYY-MM-DD
+        hora_inicio: '',
+        hora_fin: '',
         estado: 'disponible',
     });
 
@@ -21,23 +19,37 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
     const [formError, setFormError] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
 
+    // --- LÓGICA DE HERRAMIENTAS ---
+
+    // Función para obtener la fecha de hoy en formato YYYY-MM-DD local
+    const getTodayISO = () => {
+        const now = new Date();
+        return now.toLocaleDateString('en-CA', { // 'en-CA' garantiza YYYY-MM-DD
+            year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+    };
+
+    // Función para obtener la hora actual en HH:MM
+    const getCurrentTime = () => {
+        const now = new Date();
+        return now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    };
+
+
     // 1. Cargar datos en modo edición
     useEffect(() => {
         if (isEditing) {
             setLoading(true);
             turnoService.obtenerTurnoPorId(idTurno)
                 .then(data => {
-                    // Formatear la fecha y horas para inputs HTML
-                    const formattedData = {
+                    // El DTO de Python ya debería devolver la fecha en YYYY-MM-DD (ISO)
+                    // y la hora en HH:MM:SS. Substring(0, 5) funciona para hora.
+                    setFormData({
                         ...data,
                         id_cancha: data.id_cancha || 0,
-                        // El backend ya debería devolver la fecha en formato YYYY-MM-DD
-                        fecha: data.fecha || '',
-                        // El backend devuelve hora_inicio/fin como HH:MM:SS. El input type="time" requiere HH:MM.
                         hora_inicio: data.hora_inicio ? data.hora_inicio.substring(0, 5) : '',
                         hora_fin: data.hora_fin ? data.hora_fin.substring(0, 5) : '',
-                    };
-                    setFormData(formattedData);
+                    });
                     setLoading(false);
                 })
                 .catch(err => {
@@ -53,15 +65,20 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
 
         let newValue = value;
 
+        // 1. ID_CANCHA → convertir a entero
         if (name === 'id_cancha') {
-            newValue = parseInt(value) || 0; // Aseguramos que sea número entero
+            newValue = parseInt(value) || 0;
         }
+
+        // 2. FECHA: Ya es YYYY-MM-DD si usamos type="date"
+
+        // 3. HORA Inicio / Fin → HH:MM por type="time" (no requiere formateo)
 
         setFormData(prev => ({ ...prev, [name]: newValue }));
 
-        // Limpiar errores de validación
+        // 4. LIMPIAR ERRORES SI EXISTEN
         if (validationErrors[name]) {
-             setValidationErrors(prev => {
+            setValidationErrors(prev => {
                 const { [name]: removed, ...rest } = prev;
                 return rest;
             });
@@ -71,52 +88,39 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
     // 3. Validación del lado del cliente
     const validateForm = () => {
         const errors = {};
-        const now = new Date();
-        const today = now.toISOString().split('T')[0]; // YYYY-MM-DD de hoy
-        const currentTime = now.toTimeString().substring(0, 5); // HH:MM actual
+        const today = getTodayISO();
+        const currentTime = getCurrentTime();
+        const isToday = formData.fecha === today;
 
-        // Campo requerido: ID Cancha
-        if (!formData.id_cancha || formData.id_cancha <= 0) {
-            errors.id_cancha = "El ID de la cancha es obligatorio y debe ser un número positivo.";
+        // --- VALIDACIONES BÁSICAS ---
+        if (!formData.id_cancha) errors.id_cancha = "Debe seleccionar una cancha.";
+        if (!formData.fecha) errors.fecha = "Debe seleccionar una fecha.";
+        if (!formData.hora_inicio) errors.hora_inicio = "Debe indicar hora de inicio.";
+        if (!formData.hora_fin) errors.hora_fin = "Debe indicar hora de fin.";
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return false;
         }
 
-        // Campo requerido: Fecha
-        if (!formData.fecha) {
-            errors.fecha = "Debe seleccionar una fecha.";
-        } else {
-             // VALIDACIÓN 1: No se pueden crear turnos con fechas pasadas (solo en modo creación)
-            if (!isEditing && formData.fecha < today) {
-                errors.fecha = "No se pueden crear turnos con fechas pasadas.";
-            }
+        // --- VALIDACIONES DE LÓGICA DE TIEMPO ---
+
+        // A. RANGO: Hora de inicio < Hora de fin
+        if (formData.hora_inicio >= formData.hora_fin) {
+            errors.hora_inicio = "La hora de inicio debe ser anterior a la de fin.";
+            errors.hora_fin = "La hora de fin debe ser posterior a la de inicio.";
         }
 
-        // Campo requerido: Hora
-        if (!formData.hora_inicio) {
-            errors.hora_inicio = "Debe indicar la hora de inicio.";
-        }
-        if (!formData.hora_fin) {
-            errors.hora_fin = "Debe indicar la hora de fin.";
+        // B. FECHA PASADA
+        if (formData.fecha < today && !isEditing) {
+            errors.fecha = "No se pueden crear turnos en fechas pasadas.";
         }
 
-        // Validación lógica de horas: hora_inicio < hora_fin
-        if (formData.hora_inicio && formData.hora_fin) {
-            if (formData.hora_inicio >= formData.hora_fin) {
-                errors.hora_fin = "La hora de fin debe ser posterior a la hora de inicio.";
-                errors.hora_inicio = errors.hora_inicio || "La hora de inicio debe ser anterior a la hora de fin.";
-            }
-
-            // 🟢 VALIDACIÓN 2: Si la fecha es hoy, las horas no deben ser pasadas.
-            if (formData.fecha === today) {
-                if (formData.hora_inicio < currentTime) {
-                    errors.hora_inicio = errors.hora_inicio || `La hora de inicio no puede ser anterior a la hora actual (${currentTime}).`;
-                }
-                // Permitimos que la hora de fin sea anterior si la hora de inicio es futura.
-                // Si la hora de inicio es futura, la hora de fin debe ser superior a la de inicio (Validación 1).
-                // Pero si la hora de fin es anterior a la actual, y la hora de inicio también, la validación 1 ya la atrapó.
-                // Solo nos preocupamos si la hora de inicio es válida y la de fin NO lo es.
-                if (formData.hora_inicio >= currentTime && formData.hora_fin < currentTime && !isEditing) {
-                     errors.hora_fin = errors.hora_fin || `La hora de fin debe ser posterior a la hora actual (${currentTime}).`;
-                }
+        // C. HORA ACTUAL SOLO SI ES HOY Y MODO CREACIÓN
+        if (isToday && !isEditing) {
+            // Comprobación de hora de inicio contra la hora actual
+            if (formData.hora_inicio <= currentTime) {
+                errors.hora_inicio = `La hora de inicio debe ser posterior a la hora actual (${currentTime}).`;
             }
         }
 
@@ -125,7 +129,7 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
     };
 
 
-    // 4. Manejo del envío (sin cambios)
+    // 4. Manejo del envío
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -137,29 +141,27 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
         setLoading(true);
         setFormError(null);
 
-        // PAYLOAD: Asegurar que las horas tengan el formato HH:MM:SS para el DTO de Python
+        // PAYLOAD FINAL: La fecha ya es YYYY-MM-DD. Añadimos el :00 a la hora.
         const payload = {
             id_cancha: formData.id_cancha,
-            fecha: formData.fecha,
-            hora_inicio: formData.hora_inicio + ':00',
+            fecha: formData.fecha, // YYYY-MM-DD
+            hora_inicio: formData.hora_inicio + ':00', // HH:MM:00
             hora_fin: formData.hora_fin + ':00',
             estado: formData.estado,
         };
 
         try {
             if (isEditing) {
+                // El backend debería esperar los campos a actualizar
                 await turnoService.actualizarTurno(idTurno, payload);
-                console.log(`✅ Operación actualizar exitosa. Turno ID: ${idTurno}`);
             } else {
-                const result = await turnoService.crearTurno(payload);
-                console.log(`✅ Operación crear exitosa. Resultado:`, result);
+                await turnoService.crearTurno(payload);
             }
-            // Si tiene éxito, llama al callback del componente padre
             onSuccess();
         } catch (err) {
-            // El servicio devuelve el mensaje de error del backend (ej: duplicado)
             setFormError(`Error al ${isEditing ? 'actualizar' : 'crear'} el turno: ${err.message}`);
             console.error("Detalle del error de red/servidor:", err);
+        } finally {
             setLoading(false);
         }
     };
@@ -205,7 +207,7 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
                 <div className={validationErrors.fecha ? 'has-error' : ''}>
                     <label className="block text-sm font-medium text-gray-700">Fecha</label>
                     <input
-                        type="date"
+                        type="date" // <--- ¡USAMOS TYPE="DATE" PARA FORMATO ISO SEGURO!
                         name="fecha"
                         value={formData.fecha}
                         onChange={handleChange}
@@ -213,7 +215,11 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
                         className={`mt-1 block w-full border ${validationErrors.fecha ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm p-2 bg-white`}
                         disabled={loading}
                     />
-                    {!isEditing && <p className="text-xs text-gray-500 mt-1">Solo se permiten fechas futuras o la fecha de hoy al crear un turno.</p>}
+                    {!isEditing && (
+                        <p className="text-xs text-gray-500 mt-1">
+                            Solo se permiten fechas futuras o la fecha de hoy al crear un turno.
+                        </p>
+                    )}
                 </div>
 
                 <div className="flex space-x-4">
@@ -226,6 +232,7 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
                             value={formData.hora_inicio}
                             onChange={handleChange}
                             required
+                            step="60"
                             className={`mt-1 block w-full border ${validationErrors.hora_inicio ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm p-2 bg-white`}
                             disabled={loading}
                         />
@@ -233,13 +240,14 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
 
                     {/* 4. Hora Fin */}
                     <div className={`flex-1 ${validationErrors.hora_fin ? 'has-error' : ''}`}>
-                         <label className="block text-sm font-medium text-gray-700">Hora Fin</label>
+                        <label className="block text-sm font-medium text-gray-700">Hora Fin</label>
                         <input
                             type="time"
                             name="hora_fin"
                             value={formData.hora_fin}
                             onChange={handleChange}
                             required
+                            step="60"
                             className={`mt-1 block w-full border ${validationErrors.hora_fin ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm p-2 bg-white`}
                             disabled={loading}
                         />
@@ -255,7 +263,7 @@ const TurnoForm = ({ idTurno, onSuccess, onCancel }) => {
                         value={formData.estado}
                         onChange={handleChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white"
-                        disabled={loading || !isEditing} // Estado solo editable si estamos modificando
+                        disabled={loading || !isEditing}
                     >
                         {ESTADOS.map(e => (
                             <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>

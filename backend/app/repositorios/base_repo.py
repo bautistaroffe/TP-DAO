@@ -77,6 +77,7 @@ class BaseRepository:
                 conn.commit()
         finally:
             if es_atomica:
+                cursor.close()
                 conn.close()
 
         return lastrowid
@@ -90,6 +91,7 @@ class BaseRepository:
             fila = cursor.fetchone()
         finally:
             if es_atomica:
+                cursor.close()
                 conn.close()
 
         return dict(fila) if fila else None
@@ -103,6 +105,7 @@ class BaseRepository:
             filas = cursor.fetchall()
         finally:
             if es_atomica:
+                cursor.close()
                 conn.close()
 
         return [dict(f) for f in filas]
