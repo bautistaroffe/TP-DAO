@@ -310,3 +310,28 @@
 .toggle-switch input:checked + .slider::after {
   left: 22px;
 }
+/* === Responsive para Reportes === */
+@media (max-width: 1100px) {
+  .report-line {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .report-info,
+  .report-chart {
+    flex: unset;
+    width: 100%;
+  }
+
+  .report-chart {
+    height: 250px; /* evitar que el gráfico se achique demasiado */
+  }
+}
+@media (max-width: 600px) {
+  .report-line {
+    padding: 1rem;
+    gap: 1.2rem;
+  }
+}
