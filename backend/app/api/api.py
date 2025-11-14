@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routers.canchas import router as canchas_router
+from backend.app.api.routers.correo import router as correo_router
 from backend.app.api.routers.reservas import router as reservas_router
 from backend.app.api.routers.torneos import router as torneos_router
 from backend.app.api.routers.turnos import router as turnos_router
@@ -44,6 +45,7 @@ app.include_router(pagos_router, prefix="/api")
 app.include_router(servicios_adicionales_router, prefix="/api")
 app.include_router(reportes_router, prefix="/api")
 
+app.include_router(correo_router, prefix="/api")
 # ============================
 # Ruta raíz
 # ============================
