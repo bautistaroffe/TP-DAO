@@ -10,7 +10,7 @@ def get_connection():
     Retorna una conexión SQLite activa con foreign_keys habilitadas.
     Permite uso multihilo (check_same_thread=False) para FastAPI/Uvicorn.
     """
-    conn = sqlite3.connect(RUTA_BD, check_same_thread=False)
+    conn = sqlite3.connect(RUTA_BD, check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn

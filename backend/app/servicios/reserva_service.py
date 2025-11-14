@@ -34,9 +34,8 @@ class ReservaService:
             raise ValueError("El ID del cliente es obligatorio y debe ser válido.")
 
     def _turno_disponible(self, id_cancha, id_turno):
-        """Verifica si el turno no está pendiente ni confirmado en otra reserva."""
+        """Verifica si el turno no está pendiente ni confirmado en otra reserva (Lectura atómica)."""
         repo = ReservaRepository()
-        # Lectura atómica
         filas = repo.obtener_todos("""
             SELECT * FROM Reserva
             WHERE id_cancha=? AND id_turno=? AND estado IN ('pendiente', 'confirmada')
@@ -44,7 +43,7 @@ class ReservaService:
         return len(filas) == 0
 
     # ============================
-    # CREAR RESERVA (Transacción)
+    # CREAR RESERVA (Transacción: Afecta a Reserva y Turno)
     # ============================
     def crear_reserva(self, id_cancha, id_turno, id_cliente,
                       id_torneo=None, id_servicio=None, origen="particular"):
@@ -53,7 +52,6 @@ class ReservaService:
         repo_reserva = ReservaRepository()
         repo_cancha = CanchaRepository()
         repo_servicio = ServicioAdicionalRepository()
-        repo_turno = TurnoRepository()
 
         # 1. Verificar disponibilidad (Lectura atómica)
         if not self._turno_disponible(id_cancha, id_turno):
@@ -85,9 +83,16 @@ class ReservaService:
         # 3. Iniciar transacción
         repo_reserva.iniciar_transaccion()
         try:
-            # Escrituras dentro de la transacción
+            # 🟢 Escritura 1: Agregar reserva (usa la conexión transaccional)
             repo_reserva.agregar(reserva)
-            repo_turno.marcar_como_reservado(id_turno)
+
+            # 🟢 Escritura 2: Marcar Turno como reservado (FORZAMOS A USAR CONEXIÓN DE REPO_RESERVA)
+            # Usamos el método ejecutar del repositorio de reserva para asegurar la misma conexión.
+            repo_reserva.ejecutar("""
+                UPDATE Turno
+                SET estado = 'reservado'
+                WHERE id_turno = ?
+            """, (id_turno,))
 
             # 4. Confirmar
             repo_reserva.confirmar_transaccion()
@@ -122,11 +127,10 @@ class ReservaService:
         return self._mapear_a_dto(reserva)
 
     # ============================
-    # CANCELAR RESERVA (Transacción)
+    # CANCELAR RESERVA (Transacción: Afecta a Reserva y Turno)
     # ============================
     def cancelar_reserva(self, id_reserva):
         repo_reserva = ReservaRepository()
-        repo_turno = TurnoRepository()
         repo_pago = PagoRepository()
 
         # 1. Obtener datos (Lecturas atómicas)
@@ -146,7 +150,13 @@ class ReservaService:
             # Escrituras dentro de la transacción
             reserva.estado = "cancelada"
             repo_reserva.actualizar(reserva)
-            repo_turno.marcar_como_disponible(reserva.id_turno)
+
+            # 🟢 Escritura 2: Marcar Turno como disponible (FORZAMOS A USAR CONEXIÓN DE REPO_RESERVA)
+            repo_reserva.ejecutar("""
+                UPDATE Turno
+                SET estado = 'disponible'
+                WHERE id_turno = ?
+            """, (reserva.id_turno,))
 
             # 3. Confirmar
             repo_reserva.confirmar_transaccion()
@@ -159,12 +169,11 @@ class ReservaService:
             raise e
 
     # ============================
-    # MODIFICAR RESERVA (Transacción)
+    # MODIFICAR RESERVA (Transacción: Afecta a Reserva y Turno)
     # ============================
     def modificar_reserva(self, id_reserva, nuevo_id_turno=None,
                           nuevo_id_servicio=None, nuevo_id_cliente=None) -> ReservaDTO:
         repo_reserva = ReservaRepository()
-        repo_turno = TurnoRepository()
         repo_cancha = CanchaRepository()
         repo_servicio = ServicioAdicionalRepository()
         repo_pago = PagoRepository()
@@ -185,14 +194,24 @@ class ReservaService:
                 if not self._turno_disponible(reserva.id_cancha, nuevo_id_turno):
                     raise ValueError("El nuevo turno no está disponible.")
 
-                # Escrituras dentro de la transacción
-                repo_turno.marcar_como_disponible(reserva.id_turno)
-                repo_turno.marcar_como_reservado(nuevo_id_turno)
+                # 🟢 Escritura 1: Marcar turno viejo como disponible (FORZAMOS CONEXIÓN)
+                repo_reserva.ejecutar("""
+                    UPDATE Turno
+                    SET estado = 'disponible'
+                    WHERE id_turno = ?
+                """, (reserva.id_turno,))
+
+                # 🟢 Escritura 2: Marcar turno nuevo como reservado (FORZAMOS CONEXIÓN)
+                repo_reserva.ejecutar("""
+                    UPDATE Turno
+                    SET estado = 'reservado'
+                    WHERE id_turno = ?
+                """, (nuevo_id_turno,))
+
                 reserva.id_turno = nuevo_id_turno
 
             # 2️⃣ Cambiar servicio adicional
             if nuevo_id_servicio is not None:
-                # Lectura atómica
                 servicio = repo_servicio.obtener_por_id(nuevo_id_servicio)
                 if not servicio and nuevo_id_servicio is not None:
                     raise ValueError("Servicio adicional no encontrado.")
@@ -200,8 +219,7 @@ class ReservaService:
 
             # 3️⃣ Cambiar cliente
             if nuevo_id_cliente is not None:
-                # Lectura atómica
-                pago = repo_pago.obtener_por_reserva(reserva.id_reserva)  # Asumiendo este método existe
+                pago = repo_pago.obtener_por_reserva(reserva.id_reserva)
                 if pago:
                     raise ValueError("No se puede cambiar el cliente de una reserva ya pagada.")
                 reserva.id_cliente = nuevo_id_cliente

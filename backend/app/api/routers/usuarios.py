@@ -24,6 +24,31 @@ def listar_usuarios():
 # ============================
 # GET /usuarios/{id_usuario}
 # ============================
+
+@router.get("/buscar", summary="Buscar un usuario por su DNI")
+def buscar_usuario_por_dni(dni: str):
+    """
+    Busca un usuario por su DNI.
+    Devuelve el usuario si lo encuentra, o un 404 si no existe.
+    """
+    try:
+        # Llama al nuevo método del servicio
+        usuario = service.obtener_usuario_por_dni(dni)
+
+        if usuario is None:
+            # Si el servicio devuelve None (usuario no encontrado), respondemos con 404.
+            # Esto es clave para que el frontend (usuarioService.js) sepa que debe crear el usuario.
+            raise HTTPException(status_code=404, detail="Usuario no encontrado con ese DNI")
+
+        return usuario
+
+    except HTTPException as e:
+        # Re-lanzar 404 (si el service devolvió None)
+        raise e
+    except Exception as e:
+        # Errores inesperados (DB, validación, etc.)
+        raise HTTPException(status_code=500, detail=f"Error interno al buscar por DNI: {str(e)}")
+
 @router.get("/{id_usuario}", summary="Obtener un usuario por su ID")
 def obtener_usuario(id_usuario: int):
     try:
@@ -73,3 +98,6 @@ def eliminar_usuario(id_usuario: int):
         return service.eliminar_usuario(id_usuario)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+

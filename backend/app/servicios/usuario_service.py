@@ -159,3 +159,16 @@ class UsuarioService:
         # 4. Eliminar físicamente (escritura atómica)
         repo_usuario.eliminar(id_usuario)
         return {"mensaje": f"Usuario {id_usuario} eliminado correctamente."}
+
+    def obtener_usuario_por_dni(self, dni: str):
+        repo = UsuarioRepository()
+        # Lectura atómica
+        usuario = repo.obtener_por_dni(dni)
+
+        # Si no se encuentra, NO lanzamos excepción; devolvemos None/null.
+        # Esto es clave para que el frontend pueda manejar el caso "usuario no existe".
+        if not usuario:
+            return None  # Devolver None para indicar "no encontrado"
+
+        # Mapear a DTO
+        return self._mapear_a_dto(usuario)

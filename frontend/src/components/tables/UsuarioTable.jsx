@@ -1,40 +1,61 @@
-// src/components/UsuarioTable.jsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usuarioService } from '../../services/usuarioService.js'; // Asegúrate de que la ruta sea correcta
+import UsuarioForm from '../forms/UsuarioForm.jsx'; // Importamos el formulario de usuario
 
 const UsuarioTable = () => {
-    // Estados
+    // --- Estado de la Tabla ---
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [confirmId, setConfirmId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false); // Estado de carga de eliminación
 
-    // Lógica de carga de datos
-    useEffect(() => {
-        const fetchUsuarios = async () => {
-            try {
-                const data = await usuarioService.obtenerUsuarios();
-                setUsuarios(data);
-                setError(null);
-            } catch (err) {
-                setError("Error al cargar la lista de usuarios. Revisa la conexión con el Backend.");
-                console.error("Detalle del error:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
+    // --- Estado del Formulario ---
+    // null: Mostrar tabla
+    // 0: Modo creación
+    // ID > 0: Modo edición
+    const [editId, setEditId] = useState(null);
 
-        fetchUsuarios();
+    // Lógica de carga de datos (Usamos useCallback para estabilidad en useEffect)
+    const fetchUsuarios = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await usuarioService.obtenerUsuarios();
+            setUsuarios(data);
+        } catch (err) {
+            setError("Error al cargar la lista de usuarios. Revisa la conexión con el Backend.");
+            console.error("Detalle del error:", err);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Hook para ejecutar la carga inicial y el refresco (solo si no estamos editando)
+    useEffect(() => {
+        if (editId === null) {
+            fetchUsuarios();
+        }
+    }, [fetchUsuarios, editId]);
 
     // ---------------------------------
     // Lógica de Acciones
     // ---------------------------------
 
+    // Inicia el modo Edición
     const handleModificar = (id_usuario) => {
-        console.log(`Modificar Usuario ID: ${id_usuario}`);
+        setEditId(id_usuario);
+    };
+
+    // Inicia el modo Creación
+    const handleAgregarUsuario = () => {
+        setEditId(0); // 0 indica creación
+    };
+
+    // Callback de éxito/cancelación del formulario
+    const handleFormClose = () => {
+        setEditId(null); // Volver a la tabla
+        fetchUsuarios(); // Refrescar datos después de crear/modificar
     };
 
     const handleEliminar = (id_usuario) => {
@@ -51,7 +72,7 @@ const UsuarioTable = () => {
         if (!idToDelete) return;
 
         setIsDeleting(true);
-        setError(null); // Limpiar errores antes de intentar
+        setError(null);
 
         try {
             await usuarioService.eliminarUsuario(idToDelete);
@@ -64,7 +85,7 @@ const UsuarioTable = () => {
             console.error("Error de eliminación:", err);
         } finally {
             setIsDeleting(false);
-            cancelDeletion(); // Cierra el modal de confirmación
+            cancelDeletion();
         }
     };
 
@@ -72,6 +93,18 @@ const UsuarioTable = () => {
     // Componentes de Renderizado
     // ---------------------------------
 
+    // Si editId es 0 (creación) o > 0 (edición), mostramos el formulario
+    if (editId !== null) {
+        return (
+            <UsuarioForm
+                idUsuario={editId > 0 ? editId : null} // Pasamos null si es creación (editId=0)
+                onSuccess={handleFormClose}
+                onCancel={handleFormClose}
+            />
+        );
+    }
+
+    // Renderizado de la tabla
     const usuarioToDelete = usuarios.find(u => u.id_usuario === confirmId);
 
     // Visualización del error detallado
@@ -94,7 +127,7 @@ const UsuarioTable = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600">{usuario.email || 'N/A'}</td>
                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${estadoClase}`}>{usuario.estado.toUpperCase()}</td>
 
-                {/* Celda de Acciones (CORREGIDA: Botones de texto con estilo Tailwind) */}
+                {/* Celda de Acciones */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                         onClick={() => handleModificar(usuario.id_usuario)}
@@ -119,41 +152,56 @@ const UsuarioTable = () => {
 
 
     // ---------------------------------
-    // Renderizado Principal
+    // Renderizado Principal de la Tabla
     // ---------------------------------
 
     if (loading) {
         return <div className="p-4 text-center text-indigo-600 font-semibold">Cargando datos de usuarios...</div>;
     }
 
-    if (usuarios.length === 0) {
-        return <div className="p-4 text-center text-gray-500 font-semibold">No se encontraron usuarios registrados.</div>;
-    }
 
     return (
-        <div className="relative">
-            {error && <ErrorDisplay />}
-            <div className="shadow-2xl bg-white rounded-xl overflow-hidden mt-6">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-600 sticky top-0">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">DNI</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nombre</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Apellido</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Teléfono</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {usuarios.map(usuario => (
-                            <UsuarioRow key={usuario.id_usuario} usuario={usuario} />
-                        ))}
-                    </tbody>
-                </table>
+        <div className="relative p-6">
+            <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Gestión de Usuarios</h1>
+            <p className="text-gray-600 mb-6">Administración de clientes y usuarios registrados en el sistema.</p>
+
+            {/* Botón para abrir el formulario de creación */}
+            <div className="mb-4">
+                <button
+                    onClick={handleAgregarUsuario}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300"
+                >
+                    + Agregar Usuario
+                </button>
             </div>
+
+            {error && <ErrorDisplay />}
+
+            {usuarios.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 font-semibold bg-gray-50 rounded-xl">No se encontraron usuarios registrados.</div>
+            ) : (
+                <div className="shadow-2xl bg-white rounded-xl overflow-hidden mt-6">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-indigo-600 sticky top-0">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">DNI</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nombre</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Apellido</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Teléfono</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Email</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {usuarios.map(usuario => (
+                                <UsuarioRow key={usuario.id_usuario} usuario={usuario} />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* Modal de Confirmación de Eliminación */}
             {confirmId && usuarioToDelete && (

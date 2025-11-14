@@ -114,4 +114,24 @@ export const turnoService = {
     // La respuesta DELETE puede ser 204 No Content
     return true;
   },
+
+  async listarTurnosDisponibles(id_cancha) {
+    const url = `${API_BASE_URL}/disponibles?id_cancha=${id_cancha}`;
+    console.log(`[SERVICE] Obteniendo turnos disponibles desde: ${url}`);
+
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorDetail = await getErrorDetail(response);
+        throw new Error(`Error al cargar turnos disponibles: ${errorDetail}`);
+      }
+
+      return await response.json();
+
+    } catch (error) {
+      console.error("[SERVICE ERROR] Fallo al listar turnos disponibles:", error);
+      throw error;
+    }
+  },
 };

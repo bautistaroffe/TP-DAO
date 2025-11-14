@@ -14,6 +14,18 @@ service = TurnoService()
 # ============================
 # GET /turnos
 # ============================
+@router.get("/disponibles", summary="Listar turnos disponibles por cancha")
+def listar_turnos_disponibles(id_cancha: int): # <-- SIN FECHA
+    """
+    Lista turnos en estado 'disponible' para una cancha específica, a partir de hoy.
+    """
+    try:
+        # Llama a la función de servicio que filtra por disponibilidad
+        return service.listar_turnos_disponibles(id_cancha) # <-- SIN FECHA
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al listar turnos disponibles: {str(e)}")
 @router.get("/", summary="Listar todos los turnos")
 def listar_turnos():
     try:
