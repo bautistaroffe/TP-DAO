@@ -5,12 +5,14 @@ import { turnoService } from '../../../services/turnoService.js';
 import { usuarioService } from '../../../services/usuarioService.js';
 import { adicionalService } from "../../../services/serviciosAdicionalesService.js";
 import { pagoService } from "../../../services/pagoService.js";
+import { correoService } from "../../../services/correoService.js"; // <-- ¡IMPORTACIÓN NECESARIA!
 
 // Importamos los subcomponentes
 import Step1CanchaTurno from './Step1CanchaTurno';
 import Step2Servicios from './Step2Servicios';
 import Step3Usuario from './Step3Usuario';
 import Step4Resumen from './Step4Resumen';
+import PaymentSimulation from './PaymentSimulation';
 
 const PRECIOS_ADICIONALES = {
     arbitro: 2000,
@@ -20,7 +22,6 @@ const PRECIOS_ADICIONALES = {
     paletas_por_unidad: 300,
 };
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Regex para Teléfono (solo números, opcionalmente espacios, guiones o el signo +)
 const PHONE_REGEX = /^[\d\s\-+]+$/;
 
 /**
@@ -32,13 +33,12 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
 
     // --- 1. ESTADOS DE DATOS ---
     const [canchas, setCanchas] = useState([]);
-    const [turnos, setTurnos] = useState([]); // <-- CORRECCIÓN: Se mantiene aquí.
+    const [turnos, setTurnos] = useState([]);
 
     // --- 2. ESTADO DEL FORMULARIO (Datos de la Reserva) ---
     const [formData, setFormData] = useState({
         id_cancha: '',
         id_turno: '',
-        // [NUEVO CAMPO] Requerido para la carga dinámica de turnos:
         fecha_reserva: new Date().toISOString().slice(0, 10),
         servicios_adicionales: {
             cant_personas_asado: 0,
@@ -61,11 +61,15 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
     const [formError, setFormError] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
 
+    // --- ESTADOS DE PAGO/FLUJO ---
+    const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+    const [paymentData, setPaymentData] = useState(null);
+
     // ------------------------------------------------------------------
     // 5. LÓGICA DE CÁLCULO DE COSTOS (Derivados)
     // ------------------------------------------------------------------
 
-    const calcularCostoAdicionales = () => { /* ... (Mantener lógica) ... */
+    const calcularCostoAdicionales = () => {
         const s = formData.servicios_adicionales;
         let total = 0;
         if (s.arbitro) total += PRECIOS_ADICIONALES.arbitro;
@@ -87,7 +91,6 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
     // 6. CARGA INICIAL DE DATOS
     // ------------------------------------------------------------------
 
-    // CORRECCIÓN: Separamos la carga de canchas (estática) y la carga de turnos (dinámica).
     useEffect(() => {
         const loadCanchas = async () => {
             setLoading(true);
@@ -103,20 +106,20 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
         loadCanchas();
     }, []);
 
-    // 🟢 NUEVO EFECTO: Carga dinámica de turnos disponibles al cambiar cancha/fecha
+    // Carga dinámica de turnos disponibles al cambiar cancha/fecha (asumiendo que el servicio filtra)
     useEffect(() => {
         const idCancha = formData.id_cancha;
+        const fecha = formData.fecha_reserva;
 
-        if (idCancha) {
+        if (idCancha && fecha) {
             const loadTurnos = async () => {
                 setLoading(true);
                 try {
-                    // 🚨 CRÍTICO: Usar un servicio que filtre por disponibilidad
-                    // Asumimos que turnoService.listarTurnosDisponibles(idCancha, fecha) existe en tu backend.
                     const turnosData = await turnoService.listarTurnosDisponibles(idCancha);
                     setTurnos(turnosData || []);
                 } catch (err) {
                     console.error("Fallo al cargar turnos disponibles:", err);
+                    setFormError(`Error al cargar turnos disponibles: ${err.message}.`);
                     setTurnos([]);
                 } finally {
                     setLoading(false);
@@ -126,7 +129,7 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
         } else {
             setTurnos([]);
         }
-    }, [formData.id_cancha]);
+    }, [formData.id_cancha, formData.fecha_reserva]);
 
 
     // ------------------------------------------------------------------
@@ -136,7 +139,6 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
-        // Limpiar errores
         if (validationErrors[name]) {
              setValidationErrors(prev => {
                 const { [name]: removed, ...rest } = prev;
@@ -144,18 +146,16 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
             });
         }
 
-        // 1. Lógica para IDs de Cancha/Turno/Fecha
         if (['id_cancha', 'id_turno'].includes(name)) {
             const newValue = value !== '' ? parseInt(value) : '';
             setFormData(prev => ({ ...prev, [name]: newValue }));
             if (name === 'id_cancha') {
-                setFormData(prev => ({ ...prev, id_turno: '' })); // Resetear turno al cambiar cancha
+                setFormData(prev => ({ ...prev, id_turno: '' }));
             }
         } else if (name === 'fecha_reserva') {
-             setFormData(prev => ({ ...prev, fecha_reserva: value, id_turno: '' })); // Resetear turno al cambiar fecha
+             setFormData(prev => ({ ...prev, fecha_reserva: value, id_turno: '' }));
 
-        // 2. Lógica para Servicios Adicionales
-        } else if (name.startsWith('servicio_')) { /* ... (Lógica de servicios) ... */
+        } else if (name.startsWith('servicio_')) {
             const serviceKey = name.replace('servicio_', '');
             let newValue = type === 'checkbox' ? checked : parseInt(value) || 0;
             if (type !== 'checkbox' && newValue < 0) newValue = 0;
@@ -167,13 +167,11 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
                     [serviceKey]: newValue
                 }
             }));
-        // 3. Lógica para Método de Pago
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
 
-    // --- Función para Cliente Nuevo --- (Mantener)
     const handleUserChange = (e) => {
         const { name, value } = e.target;
         setUserData(prev => ({ ...prev, [name]: value }));
@@ -181,10 +179,10 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
 
 
     // ------------------------------------------------------------------
-    // 8. LÓGICA DE USUARIO (Paso 3) - Mantener
+    // 8. LÓGICA DE USUARIO (Paso 3)
     // ------------------------------------------------------------------
 
-    const handleDniSearch = async () => { /* ... (Mantener lógica de DNI) ... */
+    const handleDniSearch = async () => {
     if (!dniBusqueda || dniBusqueda.trim() === '') {
         setFormError("Ingrese el DNI del cliente.");
         return;
@@ -221,10 +219,10 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
 
 
     // ------------------------------------------------------------------
-    // 9. VALIDACIÓN Y NAVEGACIÓN - Mantener
+    // 9. VALIDACIÓN Y NAVEGACIÓN
     // ------------------------------------------------------------------
 
-    const validateStep = (currentStep) => { /* ... (Mantener lógica de validación) ... */
+    const validateStep = (currentStep) => {
         const errors = {};
 
         if (currentStep === 1) { // Cancha y Turno
@@ -235,12 +233,10 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
         if (!userData) {
             errors.user = "Debe buscar el cliente por DNI.";
         } else if (isNewUser) {
-            // Requeridos para nuevo usuario
             if (!userData.nombre) errors.nombre = "El nombre es obligatorio.";
             if (!userData.apellido) errors.apellido = "El apellido es obligatorio.";
             if (!userData.email) errors.email = "El email es obligatorio.";
 
-            // Validación de Formato para campos de nuevo usuario
             if (userData.email && !EMAIL_REGEX.test(userData.email)) {
                  errors.email = "El email no tiene un formato válido.";
             }
@@ -253,7 +249,7 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
     return Object.keys(errors).length === 0;
 };
 
-    const handleNext = () => { /* ... (Mantener lógica de next) ... */
+    const handleNext = () => {
         if (validateStep(step)) {
             setStep(prev => prev + 1);
             setFormError(null);
@@ -262,14 +258,14 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
         }
     };
 
-    const handleBack = () => { /* ... (Mantener lógica de back) ... */
+    const handleBack = () => {
         setStep(prev => prev - 1);
         setFormError(null);
     };
 
 
     // ------------------------------------------------------------------
-    // 10. MANEJO DEL ENVÍO FINAL (Paso 5: Confirmar) - Mantener lógica de pago
+    // 10. MANEJO DEL ENVÍO FINAL (handleSubmit)
     // ------------------------------------------------------------------
 
     const handleSubmit = async (e) => {
@@ -334,6 +330,7 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
                  estadoPago = null;
             }
 
+            let pagoCreado = null;
             if (estadoPago) {
                 const datosPago = {
                     id_usuario: idClienteFinal,
@@ -345,14 +342,51 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
                 if (fechaPago) {
                     datosPago.fecha_pago = fechaPago;
                 }
-                const pagoCreado = await pagoService.procesarPago(datosPago);
+                pagoCreado = await pagoService.procesarPago(datosPago);
 
-                alert(`${mensajeUsuario} ID Pago: ${pagoCreado.id_pago}`);
+
+                // Actualizar mensaje para incluir el ID del pago
+                mensajeUsuario += ` ID Pago: ${pagoCreado.id_pago}`;
             } else {
                  alert(`Reserva ${idReservaCreada} creada. Sin registro de pago inicial (Método: ${formData.metodo_pago}).`);
             }
 
-            onSuccess();
+            // 🚨 E. ENVÍO DE CORREO (Solo si el pago fue COMPLETADO, asumiendo que pagoCreado no es null)
+            if (estadoPago === 'completado' && pagoCreado) {
+                // Obtenemos los datos necesarios para el comprobante
+                const datosComprobante = {
+                    email_contacto: userData.email,
+                    id_reserva: idReservaCreada,
+                    // Aseguramos que turnoSeleccionado/canchaSeleccionada no sean null
+                    dia_reserva: turnoSeleccionado?.fecha || 'N/A',
+                    hora_turno: turnoSeleccionado ? `${turnoSeleccionado.hora_inicio.substring(0, 5)} - ${turnoSeleccionado.hora_fin.substring(0, 5)}` : 'N/A',
+                    nombre_cancha: canchaSeleccionada?.nombre || 'N/A',
+                    monto_reserva: costoTotal,
+
+                    metodo_pago: formData.metodo_pago === 'mercado_pago' ? 'Mercado Pago' : 'Efectivo (Pagado)',
+                    nombre_usuario: `${userData.nombre} ${userData.apellido}`,
+                };
+
+                // Llamada al servicio de correo
+                await correoService.enviarComprobante(datosComprobante);
+            }
+
+            // F. LÓGICA DE SIMULACIÓN DE PAGO (Si es completado por Mercado Pago)
+            if (formData.metodo_pago === 'mercado_pago' && estadoPago === 'completado') {
+
+                setPaymentData({
+                    reservaId: idReservaCreada,
+                    monto: costoTotal,
+                    clienteNombre: `${userData.nombre} ${userData.apellido}`,
+                    clienteEmail: userData.email, // <-- ¡Email para la simulación!
+                    pagoId: pagoCreado.id_pago
+                });
+                setIsSimulatingPayment(true); // Activa la simulación de pantalla
+                return; // Detenemos la ejecución aquí
+            }
+
+            alert(mensajeUsuario);
+            onSuccess(); // Finaliza si no hubo simulación de MP
         } catch (err) {
             setFormError(`Error en el proceso de reserva/pago: ${err.message}`);
             console.error("Detalle del error:", err);
@@ -365,6 +399,19 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
     // ------------------------------------------------------------------
     // 11. RENDERIZADO
     // ------------------------------------------------------------------
+
+    if (isSimulatingPayment) {
+        return (
+            <div className="max-w-xl mx-auto p-6 bg-white shadow-2xl rounded-xl mt-6">
+                 {/* Renderiza el componente de simulación */}
+                <PaymentSimulation
+                    data={paymentData}
+                    onPaymentComplete={onSuccess} // Llama al onSuccess del padre (cierra el modal)
+                />
+            </div>
+        );
+    }
+
 
     const StepDisplay = () => {
         switch (step) {
@@ -436,7 +483,6 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
         }
     };
 
-    // ... (El return del componente)
     return (
         <div className="max-w-xl mx-auto p-6 bg-white shadow-2xl rounded-xl mt-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">
