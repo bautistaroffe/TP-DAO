@@ -96,7 +96,7 @@ reservas-canchas/
 ```
 ## Instrucciones
 Los pasos y requisitos para correr el frontend estan en el README.md dentro de la carptea frontend
-Los pasos para ejecutar el practico son:nose si hay q descargar algo o no.
+Los pasos para ejecutar el practico son:Instalar: pip install email-validator 
 posicionarse en la raiz y ejecutar:
  python -m uvicorn backend.app.api.api:app --reload
 
