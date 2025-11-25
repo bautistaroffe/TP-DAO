@@ -80,4 +80,26 @@ export const reservaService = {
       return {};
     }
   },
+
+  async modificarReserva(id_reserva, datosReservaActualizada) {
+    console.log(`[SERVICE] Llamando a PUT en ${API_BASE_URL}/${id_reserva} con payload:`, datosReservaActualizada);
+
+    const response = await fetch(`${API_BASE_URL}/${id_reserva}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(datosReservaActualizada),
+    });
+
+    if (!response.ok) {
+      const errorDetail = await getErrorDetail(response);
+      throw new Error(errorDetail || `Error en el servidor al intentar modificar la reserva.`);
+    }
+
+    try {
+      return await response.json();
+    } catch (e) {
+      console.warn(`Operación PUT exitosa pero falló la lectura del JSON de respuesta. Asumiendo éxito.`, e);
+      return {};
+    }
+  }
 };

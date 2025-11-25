@@ -1,5 +1,3 @@
-// src/components/ReservaTable.jsx
-
 import React, { useState, useEffect } from 'react';
 import { reservaService } from '../../services/reservaService.js'; // Asegúrate de que la ruta sea correcta
 
@@ -10,6 +8,11 @@ const ReservaTable = () => {
     const [error, setError] = useState(null);
     const [confirmId, setConfirmId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Estados para edición
+    const [editId, setEditId] = useState(null);
+    const [editData, setEditData] = useState({});
+    const [isEditing, setIsEditing] = useState(false);
 
     // Lógica de carga de datos
     useEffect(() => {
@@ -34,7 +37,20 @@ const ReservaTable = () => {
     // ---------------------------------
 
     const handleModificar = (id_reserva) => {
-        console.log(`Modificar Reserva ID: ${id_reserva}`);
+        const reserva = reservas.find(r => r.id_reserva === id_reserva);
+        if (!reserva) return;
+        // Inicializa el formulario de edición con los datos actuales
+        setEditId(id_reserva);
+        setEditData({
+            precio_total: reserva.precio_total,
+            estado: reserva.estado,
+            origen: reserva.origen,
+            id_cancha: reserva.id_cancha,
+            id_turno: reserva.id_turno,
+            id_cliente: reserva.id_cliente,
+            id_torneo: reserva.id_torneo || '',
+            id_servicio: reserva.id_servicio || ''
+        });
     };
 
     const handleEliminar = (id_reserva) => {
@@ -57,7 +73,7 @@ const ReservaTable = () => {
             await reservaService.eliminarReserva(idToDelete);
 
             // Actualiza la lista en el estado
-            setReservas(reservas.filter(r => r.id_reserva !== idToDelete));
+            setReservas(prev => prev.filter(r => r.id_reserva !== idToDelete));
             console.log(`Reserva ${idToDelete} eliminada con éxito.`);
 
         } catch (err) {
@@ -68,6 +84,47 @@ const ReservaTable = () => {
             setIsDeleting(false);
             cancelDeletion(); // Cierra el modal de confirmación
         }
+    };
+
+    // Manejo del formulario de edición
+    const handleEditChange = (e) => {
+        const { name, value } = e.target;
+        if (name === 'precio_total') {
+            // permitir vacío temporalmente
+            const parsed = value === '' ? '' : parseFloat(value);
+            setEditData(prev => ({ ...prev, [name]: parsed }));
+        } else {
+            setEditData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const submitEdit = async (e) => {
+        e.preventDefault();
+        if (!editId) return;
+
+        setIsEditing(true);
+        setError(null);
+
+        try {
+            // Llama al servicio de modificación (espera que exista el método)
+            await reservaService.modificarReserva(editId, editData);
+
+            // Actualiza la lista localmente
+            setReservas(prev => prev.map(r => r.id_reserva === editId ? { ...r, ...editData } : r));
+            setEditId(null);
+            setEditData({});
+            console.log(`Reserva ${editId} modificada con éxito.`);
+        } catch (err) {
+            setError(`Error al modificar la reserva: ${err.message}`);
+            console.error("Error de modificación:", err);
+        } finally {
+            setIsEditing(false);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditId(null);
+        setEditData({});
     };
 
     // Encuentra la reserva a eliminar para mostrar el ID en el modal
@@ -102,13 +159,13 @@ const ReservaTable = () => {
                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${estadoClase}`}>{reserva.estado.toUpperCase()}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{reserva.origen}</td>
 
-                {/* Celda de Acciones (CORREGIDA: Botones de texto) */}
+                {/* Celda de Acciones */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                         onClick={() => handleModificar(reserva.id_reserva)}
                         className="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-600 px-3 py-1 rounded-lg text-xs font-semibold transition duration-200 disabled:opacity-50"
                         aria-label={`Modificar Reserva ${reserva.id_reserva}`}
-                        disabled={isDeleting}
+                        disabled={isDeleting || isEditing}
                     >
                         Modificar
                     </button>
@@ -116,7 +173,7 @@ const ReservaTable = () => {
                         onClick={() => handleEliminar(reserva.id_reserva)}
                         className="text-red-600 hover:text-white hover:bg-red-600 border border-red-600 px-3 py-1 rounded-lg text-xs font-semibold transition duration-200 disabled:opacity-50"
                         aria-label={`Eliminar Reserva ${reserva.id_reserva}`}
-                        disabled={isDeleting}
+                        disabled={isDeleting || isEditing}
                     >
                         Eliminar
                     </button>
@@ -193,6 +250,100 @@ const ReservaTable = () => {
                                 {isDeleting ? 'Eliminando...' : 'Eliminar'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Edición */}
+            {editId && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-lg shadow-2xl max-w-lg w-full">
+                        <h3 className="text-lg font-bold text-indigo-600 mb-4">Editar Reserva #{editId}</h3>
+                        <form onSubmit={submitEdit} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-3">
+                                <label className="text-sm text-gray-700">
+                                    Precio Total
+                                    <input
+                                        name="precio_total"
+                                        type="number"
+                                        step="0.01"
+                                        value={editData.precio_total === '' ? '' : editData.precio_total}
+                                        onChange={handleEditChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+                                        required
+                                    />
+                                </label>
+
+                                <label className="text-sm text-gray-700">
+                                    Estado
+                                    <select
+                                        name="estado"
+                                        value={editData.estado || ''}
+                                        onChange={handleEditChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+                                        required
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="confirmada">Confirmada</option>
+                                        <option value="cancelada">Cancelada</option>
+                                        <option value="pendiente">Pendiente</option>
+                                    </select>
+                                </label>
+
+                                <label className="text-sm text-gray-700">
+                                    Origen
+                                    <input
+                                        name="origen"
+                                        type="text"
+                                        value={editData.origen || ''}
+                                        onChange={handleEditChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+                                    />
+                                </label>
+
+                                <label className="text-sm text-gray-700">
+                                    Cancha (ID)
+                                    <input
+                                        name="id_cancha"
+                                        type="number"
+                                        value={editData.id_cancha}
+                                        onChange={handleEditChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+                                        required
+                                    />
+                                </label>
+
+                                <label className="text-sm text-gray-700">
+                                    Turno (ID)
+                                    <input
+                                        name="id_turno"
+                                        type="number"
+                                        value={editData.id_turno}
+                                        onChange={handleEditChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+                                        required
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={cancelEdit}
+                                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
+                                    disabled={isEditing}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className={`px-4 py-2 text-white rounded-lg transition ${isEditing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                    disabled={isEditing}
+                                >
+                                    {isEditing ? 'Guardando...' : 'Guardar cambios'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
