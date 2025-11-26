@@ -8,14 +8,12 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
     nombre: "",
     fecha_inicio: "",
     fecha_fin: "",
-    cupo_cta: "",
-    cupo_total: "",
     categoria: "",
   });
 
   const [loading, setLoading] = useState(false);
 
-  // 👉 1. Cargar datos cuando es edición
+  // 👉 Cargar datos al editar
   useEffect(() => {
     if (!isEditing) return;
 
@@ -28,8 +26,6 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
           nombre: data.nombre ?? "",
           fecha_inicio: data.fecha_inicio ?? "",
           fecha_fin: data.fecha_fin ?? "",
-          cupo_cta: data.cupo_cta ?? "",
-          cupo_total: data.cupo_total ?? "",
           categoria: data.categoria ?? "",
         });
         setLoading(false);
@@ -40,7 +36,6 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
       });
   }, [isEditing, id_torneo]);
 
-  // 👉 2. Manejo de cambios
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -48,16 +43,15 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
     });
   };
 
-  // 👉 3. Guardar (crear o editar)
+  // 👉 Guardar
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
       const payload = {
         nombre: formData.nombre,
         fecha_inicio: formData.fecha_inicio,
         fecha_fin: formData.fecha_fin,
-        cupo_cta: parseInt(formData.cupo_cta),
-        cupo_total: parseInt(formData.cupo_total),
         categoria: formData.categoria,
       };
 
@@ -124,26 +118,6 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
         </div>
       </div>
 
-      <input
-        type="number"
-        name="cupo_cta"
-        placeholder="Cupo por cuenta"
-        value={formData.cupo_cta}
-        onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
-      />
-
-      <input
-        type="number"
-        name="cupo_total"
-        placeholder="Cupo total"
-        value={formData.cupo_total}
-        onChange={handleChange}
-        className="w-full p-2 border rounded"
-        required
-      />
-
       <div>
         <label className="block text-sm font-medium">Categoría</label>
         <select
@@ -183,6 +157,7 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
 };
 
 export default TorneoForm;
+
 
 
 
