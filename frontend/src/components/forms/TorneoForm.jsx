@@ -1,16 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { torneoService } from "../../services/torneoService.js";
 
-const TorneoForm = ({ onSuccess, onCancel }) => {
+const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
+  const isEditing = !!id_torneo;
+
   const [formData, setFormData] = useState({
     nombre: "",
     fecha_inicio: "",
     fecha_fin: "",
     cupo_cta: "",
     cupo_total: "",
-    categoria: "", // solo una categoría
+    categoria: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
+  // 👉 1. Cargar datos cuando es edición
+  useEffect(() => {
+    if (!isEditing) return;
+
+    setLoading(true);
+
+    torneoService
+      .obtenerTorneoPorId(id_torneo)
+      .then((data) => {
+        setFormData({
+          nombre: data.nombre ?? "",
+          fecha_inicio: data.fecha_inicio ?? "",
+          fecha_fin: data.fecha_fin ?? "",
+          cupo_cta: data.cupo_cta ?? "",
+          cupo_total: data.cupo_total ?? "",
+          categoria: data.categoria ?? "",
+        });
+        setLoading(false);
+      })
+      .catch((err) => {
+        alert("Error al cargar torneo: " + err.message);
+        setLoading(false);
+      });
+  }, [isEditing, id_torneo]);
+
+  // 👉 2. Manejo de cambios
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -18,9 +48,9 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
     });
   };
 
+  // 👉 3. Guardar (crear o editar)
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const payload = {
         nombre: formData.nombre,
@@ -31,15 +61,16 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
         categoria: formData.categoria,
       };
 
-      console.log("Enviando torneo al backend:", payload);
-
-      await torneoService.crearTorneo(payload);
+      if (isEditing) {
+        await torneoService.ActualizarTorneo(id_torneo, payload);
+      } else {
+        await torneoService.crearTorneo(payload);
+      }
 
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error("Error al crear torneo:", error);
       alert(
-        "Error al guardar el torneo: " +
+        "Error al guardar torneo: " +
           (error.message || JSON.stringify(error))
       );
     }
@@ -47,9 +78,15 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
 
   const categorias = ["Sub 10", "Sub 12", "Sub 14", "Sub 16"];
 
+  if (loading) {
+    return <div className="p-6 text-indigo-600">Cargando torneo...</div>;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white shadow rounded">
-      <h2 className="text-xl font-bold text-indigo-700">Crear Torneo</h2>
+      <h2 className="text-xl font-bold text-indigo-700">
+        {isEditing ? `Editar Torneo (ID: ${id_torneo})` : "Crear Torneo"}
+      </h2>
 
       <input
         type="text"
@@ -63,7 +100,7 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Fecha Inicio</label>
+          <label className="block text-sm font-medium">Fecha Inicio</label>
           <input
             type="date"
             name="fecha_inicio"
@@ -75,7 +112,7 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Fecha Fin</label>
+          <label className="block text-sm font-medium">Fecha Fin</label>
           <input
             type="date"
             name="fecha_fin"
@@ -108,7 +145,7 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
       />
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+        <label className="block text-sm font-medium">Categoría</label>
         <select
           name="categoria"
           value={formData.categoria}
@@ -138,7 +175,7 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
           type="submit"
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-          Guardar
+          {isEditing ? "Guardar Cambios" : "Crear Torneo"}
         </button>
       </div>
     </form>
@@ -146,6 +183,7 @@ const TorneoForm = ({ onSuccess, onCancel }) => {
 };
 
 export default TorneoForm;
+
 
 
 

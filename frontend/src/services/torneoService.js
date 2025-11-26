@@ -3,7 +3,6 @@ const API_BASE_URL = "http://localhost:8000/api/torneos";
 const getErrorDetail = async (response) => {
   try {
     const errorData = await response.json();
-    // Si viene array o objeto, lo retornamos tal cual
     return errorData.detail || errorData.message || errorData || response.statusText;
   } catch {
     return response.statusText;
@@ -24,6 +23,24 @@ export const torneoService = {
       throw error;
     }
   },
+
+  // ⭐⭐⭐ MÉTODO QUE FALTABA ⭐⭐⭐
+  async obtenerTorneoPorId(id_torneo) {
+    const response = await fetch(`${API_BASE_URL}/${id_torneo}`);
+    if (!response.ok) {
+      const errorDetail = await getErrorDetail(response);
+      throw new Error(
+        Array.isArray(errorDetail) ? JSON.stringify(errorDetail, null, 2) : errorDetail
+      );
+    }
+    return await response.json();
+  },
+
+    // alias con el nombre usado en el form (minúscula)
+  async actualizarTorneo(id_torneo, datosActualizados) {
+    return this.ActualizarTorneo(id_torneo, datosActualizados);
+  },
+
 
   async eliminarTorneo(id_torneo) {
     const response = await fetch(`${API_BASE_URL}/${id_torneo}`, { method: 'DELETE' });

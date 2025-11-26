@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { torneoService } from '../../services/torneoService.js'; // Asegúrate de que la ruta sea correcta
 
-const TorneoTable = () => {
+const TorneoTable = ({ onEditStart }) => {
     // Estados
     const [torneos, setTorneos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -36,6 +36,9 @@ const TorneoTable = () => {
 
     const handleModificar = (id_torneo) => {
         console.log(`Modificar Torneo ID: ${id_torneo}`);
+        if (onEditStart) {
+            onEditStart(id_torneo);
+        }
     };
 
     const handleEliminar = (id_torneo) => {
