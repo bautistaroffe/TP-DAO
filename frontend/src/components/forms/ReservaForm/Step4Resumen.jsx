@@ -56,7 +56,7 @@ const Step4Resumen = ({
 
   return (
     <div className="mb-4">
-      <h5 className="text-primary fw-bold">4. Resumen y Pago</h5>
+      <h5 className="text-primary fw-bold">Resumen y Pago</h5>
 
       {/* Detalle de la Reserva */}
       <div className="border p-3 rounded bg-info bg-opacity-10 border-info mb-3">

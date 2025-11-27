@@ -115,7 +115,7 @@ const Step3Usuario = ({
 
   return (
     <div className="mb-4">
-      <h5 className="text-primary fw-bold">3. Datos del Usuario</h5>
+      <h5 className="text-primary fw-bold">Datos del Usuario</h5>
       <p className="small text-muted">
         Busque el cliente por <strong>DNI</strong>. Si no existe, complete los
         campos para registrarlo.
