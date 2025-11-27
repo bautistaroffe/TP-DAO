@@ -71,76 +71,87 @@ export default function ReportesPage() {
     }
   }
 
-  async function cargarReservasCancha() {
-    if (!idCancha || idCancha < 1) return alert("ID de cancha inválido");
-    if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
-    if (new Date(fechaInicio) > new Date(fechaFin))
-      return alert("La fecha inicial no puede ser posterior a la final");
+async function cargarReservasCancha() {
+  if (!idCancha || idCancha < 1) return alert("ID de cancha inválido");
+  if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
+  if (new Date(fechaInicio) > new Date(fechaFin))
+    return alert("La fecha inicial no puede ser posterior a la final");
 
-    setLoading(true);
-    try {
-      const periodo = await getReservasPorCancha(idCancha, fechaInicio, fechaFin);
-      const reservas = periodo?.reservas || [];
+  setLoading(true);
+  try {
+    const periodo = await getReservasPorCancha(idCancha, fechaInicio, fechaFin);
+    const reservas = periodo?.reservas || [];
 
-      const fechaInicioObj = new Date(periodo?.desde || fechaInicio);
-      const fechaFinObj = new Date(periodo?.hasta || fechaFin);
-      const diffDias = (fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24);
+    const fechaInicioObj = new Date(periodo?.desde || fechaInicio);
+    const fechaFinObj = new Date(periodo?.hasta || fechaFin);
+    const diffDias = (fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24);
 
-      let saltoDias = 1;
-      if (diffDias > 60) saltoDias = 30;
-      else if (diffDias > 30) saltoDias = 15;
-      else if (diffDias > 5) saltoDias = 5;
+    let saltoDias = 1;
+    if (diffDias > 60) saltoDias = 30;
+    else if (diffDias > 30) saltoDias = 15;
+    else if (diffDias > 5) saltoDias = 5;
 
-      const intervalos = [];
-      let cursor = new Date(fechaInicioObj);
-      while (cursor <= fechaFinObj) {
-        const siguiente = new Date(cursor);
-        siguiente.setDate(cursor.getDate() + saltoDias);
-        intervalos.push({
-          inicio: new Date(cursor),
-          fin: siguiente < fechaFinObj ? new Date(siguiente) : fechaFinObj,
-        });
-        cursor = siguiente;
+    const intervalos = [];
+    let cursor = new Date(fechaInicioObj);
+    while (cursor <= fechaFinObj) {
+      const siguiente = new Date(cursor);
+      siguiente.setDate(cursor.getDate() + saltoDias);
+      intervalos.push({
+        inicio: new Date(cursor),
+        fin: siguiente < fechaFinObj ? new Date(siguiente) : fechaFinObj,
+      });
+      cursor = siguiente;
+    }
+
+    // Función para formatear fecha como DD/MM
+    function formatDate(d) {
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    }
+
+    const counts = intervalos.map(({ inicio, fin }) => {
+      const count = reservas.filter((r) => {
+        const fechaReserva = new Date(r.fecha_turno);
+        return fechaReserva >= inicio && fechaReserva < fin;
+      }).length;
+
+      let etiqueta = "";
+      if (saltoDias >= 30) {
+        etiqueta = inicio.toLocaleString("default", { month: "short" });
+      } else {
+        etiqueta = `${formatDate(inicio)}–${formatDate(fin)}`;
       }
 
-      const counts = intervalos.map(({ inicio, fin }) => {
-        const count = reservas.filter((r) => {
-          const fechaReserva = new Date(r.fecha_turno);
-          return fechaReserva >= inicio && fechaReserva < fin;
-        }).length;
+      return { periodo: etiqueta, reservas: count };
+    });
 
-        let etiqueta = "";
-        if (saltoDias >= 30)
-          etiqueta = inicio.toLocaleString("default", { month: "short" });
-        else if (saltoDias === 15)
-          etiqueta = `${inicio.getDate()}–${Math.min(fin.getDate(), fechaFinObj.getDate())}`;
-        else
-          etiqueta = inicio.toISOString().slice(5, 10);
-
-        return { periodo: etiqueta, reservas: count };
-      });
-      setReservasCancha(counts);
-    } catch (err) {
-      console.error("❌ Error al cargar reservas por cancha:", err);
-      setReservasCancha([]);
-    } finally {
-      setLoading(false);
-    }
+    setReservasCancha(counts);
+  } catch (err) {
+    console.error("❌ Error al cargar reservas por cancha:", err);
+    setReservasCancha([]);
+  } finally {
+    setLoading(false);
   }
+}
+
 
   async function cargarCanchasMasUsadas() {
-    if (!topN || topN < 1) return alert("Top N inválido");
-    setLoading(true);
-    try {
-      const masUsadas = await getCanchasMasUsadas(topN);
-      setCanchasMasUsadas(masUsadas?.ranking || []);
-    } catch (err) {
-      console.error("❌ Error al cargar canchas más usadas:", err);
-      setCanchasMasUsadas([]);
-    } finally {
-      setLoading(false);
-    }
+  if (!topN || topN < 1) return alert("Top N inválido");
+  if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
+  if (new Date(fechaInicio) > new Date(fechaFin))
+    return alert("La fecha inicial no puede ser posterior a la final");
+
+  setLoading(true);
+  try {
+    const masUsadas = await getCanchasMasUsadas(topN, fechaInicio, fechaFin);
+    setCanchasMasUsadas(masUsadas?.ranking || []);
+  } catch (err) {
+    console.error("❌ Error al cargar canchas más usadas:", err);
+    setCanchasMasUsadas([]);
+  } finally {
+    setLoading(false);
   }
+}
+
 
   async function cargarUtilizacion() {
     if (!año || año < 2000 || año > 2100) return alert("Año inválido");
@@ -306,6 +317,14 @@ export default function ReportesPage() {
                 Top N:
                 <input type="number" value={topN} min="1" onChange={(e) => setTopN(Number(e.target.value))} />
               </label>
+              <label>
+                Desde:
+                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              </label>
+              <label>
+                Hasta:
+                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+              </label>
               <button onClick={cargarCanchasMasUsadas}>Actualizar</button>
               <button
                 onClick={() =>
@@ -350,6 +369,7 @@ export default function ReportesPage() {
             </ResponsiveContainer>
           </div>
         </div>
+
 
         {/* === 4️⃣ Utilización mensual === */}
         <div className="report-line">

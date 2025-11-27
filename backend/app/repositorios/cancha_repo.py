@@ -135,13 +135,21 @@ class CanchaRepository(BaseRepository):
     # ----------------------------------------
     #   Reportes
     # ----------------------------------------
-    def obtener_mas_reservadas(self, top_n=5):
+    def obtener_mas_reservadas(self, top_n=5, fecha_inicio=None, fecha_fin=None):
         query = """
             SELECT c.id_cancha, c.nombre, COUNT(r.id_reserva) AS total_reservas
             FROM Cancha c
             LEFT JOIN Reserva r ON c.id_cancha = r.id_cancha
+            LEFT JOIN Turno t ON r.id_turno = t.id_turno
+        """
+        params = []
+        if fecha_inicio and fecha_fin:
+            query += " WHERE t.fecha BETWEEN ? AND ?"
+            params.extend([fecha_inicio, fecha_fin])
+        query += """
             GROUP BY c.id_cancha
             ORDER BY total_reservas DESC
             LIMIT ?
         """
-        return self.obtener_todos(query, (top_n,))
+        params.append(top_n)
+        return self.obtener_todos(query, tuple(params))

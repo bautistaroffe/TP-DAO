@@ -27,11 +27,16 @@ export async function getReservasPorCancha(idCancha, fechaInicio, fechaFin) {
 }
 
 
-export async function getCanchasMasUsadas(top = 5) {
-  const res = await fetch(`${API_URL}/canchas-mas-usadas?top_n=${top}`);
+export async function getCanchasMasUsadas(top = 5, fechaInicio, fechaFin) {
+  const url = `${API_URL}/canchas-mas-usadas?top_n=${top}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+
+  console.log("📡 GET:", url); // Muestra la URL completa
+
+  const res = await fetch(url);
   if (!res.ok) throw new Error("Error al obtener canchas más usadas");
   return await res.json();
 }
+
 
 export async function getUtilizacionMensual(anio, mes = null) {
   const url = mes

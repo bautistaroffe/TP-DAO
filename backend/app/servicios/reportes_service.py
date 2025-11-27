@@ -138,13 +138,14 @@ class ReportesService:
     # =====================================================
     # 3️⃣ REPORTE: Canchas más reservadas
     # =====================================================
-    def generar_reporte_canchas_mas_reservadas(self, top_n: int = 5):
+    def generar_reporte_canchas_mas_reservadas(self, top_n: int = 5, fecha_inicio: date = None, fecha_fin: date = None):
         """
-        Devuelve un ranking de las canchas con más reservas confirmadas/pagadas.
+        Devuelve un ranking de las canchas con más reservas confirmadas/pagadas,
+        opcionalmente filtrado por un período.
         """
-        filas = self.cancha_repo.obtener_mas_reservadas(top_n)
+        filas = self.cancha_repo.obtener_mas_reservadas(top_n, fecha_inicio, fecha_fin)
         if not filas:
-            return {"mensaje": "No hay datos de reservas."}
+            return {"mensaje": "No hay datos de reservas para estas fechas."}
 
         total = sum(f["total_reservas"] for f in filas)
         reporte = {

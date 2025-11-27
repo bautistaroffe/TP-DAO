@@ -58,10 +58,16 @@ def reporte_reservas_por_cancha(
 # ============================
 @router.get("/canchas-mas-usadas", summary="Canchas más utilizadas")
 def reporte_canchas_mas_usadas(
-    top_n: int = Query(5, description="Cantidad de canchas a mostrar en el ranking (por defecto 5)")
+    top_n: int = Query(5, description="Cantidad de canchas a mostrar en el ranking (por defecto 5)"),
+    fecha_inicio: date | None = Query(..., description="Fecha inicial (YYYY-MM-DD)"),
+    fecha_fin: date | None = Query(..., description="Fecha final (YYYY-MM-DD)")
 ):
     try:
-        return service.generar_reporte_canchas_mas_reservadas(top_n)
+        return service.generar_reporte_canchas_mas_reservadas(
+            top_n=top_n,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
