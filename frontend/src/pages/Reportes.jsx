@@ -16,6 +16,7 @@ import { generarReportePDF } from "../utils/pdfReportGenerator";
 export default function ReportesPage() {
   const [utilizacion, setUtilizacion] = useState([]);
   const [reservasCliente, setReservasCliente] = useState([]);
+  const [clienteInfo, setClienteInfo] = useState({});
   const [canchasMasUsadas, setCanchasMasUsadas] = useState([]);
   const [reservasCancha, setReservasCancha] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,32 +30,24 @@ export default function ReportesPage() {
   const [topN, setTopN] = useState(5);
   const [año, setAño] = useState(2025);
 
-const COLORS = [
-  "#0d1b2a", // Enero - charcoal (muy oscuro)
-  "#142b46", // Febrero - azul carbón
-  "#1e3a8a", // Marzo - marian blue
-  "#2c5282", // Abril - azul acero
-  "#35658f", // Mayo - azul frío
-  "#457b9d", // Junio - cerulean
-  "#5a8eb1", // Julio - azul intermedio
-  "#7baac4", // Agosto - azul grisáceo medio
-  "#98c1d9", // Septiembre - powder blue
-  "#b2d0e0", // Octubre - celeste pálido
-  "#cddde7", // Noviembre - azul muy claro
-  "#E2E8F0"  // Diciembre - alice blue
-];
-
-
+  const COLORS = [
+    "#0d1b2a", "#142b46", "#1e3a8a", "#2c5282", "#35658f",
+    "#457b9d", "#5a8eb1", "#7baac4", "#98c1d9", "#b2d0e0",
+    "#cddde7", "#E2E8F0"
+  ];
 
   // === Funciones por reporte ===
   async function cargarReservasCliente() {
     if (!idCliente || idCliente < 1) return alert("ID de cliente inválido");
+    if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
+    if (new Date(fechaInicio) > new Date(fechaFin))
+      return alert("La fecha inicial no puede ser posterior a la final");
+
     setLoading(true);
     try {
-      const dataCliente = await getReservasPorCliente(idCliente);
-      const reservasData = Array.isArray(dataCliente)
-        ? dataCliente
-        : dataCliente.reservas || [];
+      const dataCliente = await getReservasPorCliente(idCliente, fechaInicio, fechaFin);
+      const reservasData = dataCliente?.reservas || [];
+      setClienteInfo(dataCliente?.cliente || {});
 
       const clientesMap = {};
       reservasData.forEach((r) => {
@@ -71,6 +64,8 @@ const COLORS = [
       setReservasCliente(chartReservas);
     } catch (err) {
       console.error("❌ Error al cargar reservas por cliente:", err);
+      setReservasCliente([]);
+      setClienteInfo({});
     } finally {
       setLoading(false);
     }
@@ -85,8 +80,10 @@ const COLORS = [
     setLoading(true);
     try {
       const periodo = await getReservasPorCancha(idCancha, fechaInicio, fechaFin);
-      const fechaInicioObj = new Date(periodo.desde);
-      const fechaFinObj = new Date(periodo.hasta);
+      const reservas = periodo?.reservas || [];
+
+      const fechaInicioObj = new Date(periodo?.desde || fechaInicio);
+      const fechaFinObj = new Date(periodo?.hasta || fechaFin);
       const diffDias = (fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24);
 
       let saltoDias = 1;
@@ -107,21 +104,25 @@ const COLORS = [
       }
 
       const counts = intervalos.map(({ inicio, fin }) => {
-        const count = periodo.reservas.filter((r) => {
+        const count = reservas.filter((r) => {
           const fechaReserva = new Date(r.fecha_turno);
           return fechaReserva >= inicio && fechaReserva < fin;
         }).length;
+
         let etiqueta = "";
         if (saltoDias >= 30)
           etiqueta = inicio.toLocaleString("default", { month: "short" });
         else if (saltoDias === 15)
           etiqueta = `${inicio.getDate()}–${Math.min(fin.getDate(), fechaFinObj.getDate())}`;
-        else etiqueta = inicio.toISOString().slice(5, 10);
+        else
+          etiqueta = inicio.toISOString().slice(5, 10);
+
         return { periodo: etiqueta, reservas: count };
       });
       setReservasCancha(counts);
     } catch (err) {
       console.error("❌ Error al cargar reservas por cancha:", err);
+      setReservasCancha([]);
     } finally {
       setLoading(false);
     }
@@ -132,9 +133,10 @@ const COLORS = [
     setLoading(true);
     try {
       const masUsadas = await getCanchasMasUsadas(topN);
-      setCanchasMasUsadas(masUsadas.ranking);
+      setCanchasMasUsadas(masUsadas?.ranking || []);
     } catch (err) {
       console.error("❌ Error al cargar canchas más usadas:", err);
+      setCanchasMasUsadas([]);
     } finally {
       setLoading(false);
     }
@@ -145,13 +147,14 @@ const COLORS = [
     setLoading(true);
     try {
       const util = await getUtilizacionMensual(año);
-      const chartUtil = Object.entries(util).map(([cancha, meses]) => ({
+      const chartUtil = Object.entries(util || {}).map(([cancha, meses]) => ({
         cancha,
-        ...Object.fromEntries(meses.map((v, i) => [`Mes ${i + 1}`, v])),
+        ...Object.fromEntries((meses || []).map((v, i) => [`Mes ${i + 1}`, v])),
       }));
       setUtilizacion(chartUtil);
     } catch (err) {
       console.error("❌ Error al cargar utilización mensual:", err);
+      setUtilizacion([]);
     } finally {
       setLoading(false);
     }
@@ -176,7 +179,7 @@ const COLORS = [
         {/* === 1️⃣ Reservas por cliente === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>Reservas por cliente</h3>
+            <h3>Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}</h3>
             <div className="parametros">
               <label>
                 ID Cliente:
@@ -187,24 +190,30 @@ const COLORS = [
                   onChange={(e) => setIdCliente(Number(e.target.value))}
                 />
               </label>
+              <label>
+                Desde:
+                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              </label>
+              <label>
+                Hasta:
+                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+              </label>
               <button onClick={cargarReservasCliente}>Actualizar</button>
-
-                <button
-                    onClick={() =>
-                        generarReportePDF(
-                            `Reporte de Reservas del Cliente #${idCliente}`,
-                            reservasCliente,
-                            {
-                                autor: "Área Administrativa",
-                                empresa: "CONTROL RISK S.R.L.",
-                                campos: ["cancha", "monto", "cantidad"],
-                            }
-                        )
+              <button
+                onClick={() =>
+                  generarReportePDF(
+                    `Reporte de Reservas del Cliente #${idCliente}`,
+                    reservasCliente,
+                    {
+                      autor: "Área Administrativa",
+                      empresa: "CONTROL RISK S.R.L.",
+                      campos: ["cancha", "monto", "cantidad"],
                     }
-                >
-                    Ver Reporte
-                </button>
-
+                  )
+                }
+              >
+                Ver Reporte
+              </button>
             </div>
           </div>
 
@@ -218,30 +227,20 @@ const COLORS = [
             />
             <span className="slider"></span>
             <span className="label-text">
-              {modoReservasCliente === "monto"
-                ? "Monto total"
-                : "Cantidad de reservas"}
+              {modoReservasCliente === "monto" ? "Monto total" : "Cantidad de reservas"}
             </span>
           </label>
 
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={reservasCliente}>
+              <BarChart data={reservasCliente || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="cancha" />
                 <YAxis />
-                <Tooltip
-                  formatter={(v) =>
-                    modoReservasCliente === "monto"
-                      ? `$${v.toLocaleString()}`
-                      : v
-                  }
-                />
+                <Tooltip formatter={(v) => (modoReservasCliente === "monto" ? `$${v.toLocaleString()}` : v)} />
                 <Bar
                   key={modoReservasCliente}
-                  dataKey={
-                    modoReservasCliente === "monto" ? "monto" : "cantidad"
-                  }
+                  dataKey={modoReservasCliente === "monto" ? "monto" : "cantidad"}
                   fill={COLORS[1]}
                 />
               </BarChart>
@@ -256,66 +255,43 @@ const COLORS = [
             <div className="parametros">
               <label>
                 ID Cancha:
-                <input
-                  type="number"
-                  value={idCancha}
-                  min="1"
-                  onChange={(e) => {
-                      const val = e.target.value;
-                      setIdCancha(val ? Number(val) : "");
-                  }}
-                />
+                <input type="number" value={idCancha} min="1" onChange={(e) => setIdCancha(Number(e.target.value))} />
               </label>
               <label>
                 Desde:
-                <input
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                />
+                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
               </label>
               <label>
                 Hasta:
-                <input
-                  type="date"
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                />
+                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
               </label>
               <button onClick={cargarReservasCancha}>Actualizar</button>
-
-                <button
-                    onClick={() =>
-                        generarReportePDF(
-                            `Reservas de la Cancha #${idCancha}`,
-                            reservasCancha,
-                            {
-                                autor: "Área Administrativa",
-                                empresa: "CONTROL RISK S.R.L.",
-                                campos: ["periodo", "reservas"],
-                            }
-                        )
+              <button
+                onClick={() =>
+                  generarReportePDF(
+                    `Reservas de la Cancha #${idCancha}`,
+                    reservasCancha,
+                    {
+                      autor: "Área Administrativa",
+                      empresa: "CONTROL RISK S.R.L.",
+                      campos: ["periodo", "reservas"],
                     }
-                >
-                    Ver Reporte
-                </button>
-
+                  )
+                }
+              >
+                Ver Reporte
+              </button>
             </div>
           </div>
 
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={reservasCancha}>
+              <LineChart data={reservasCancha || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="periodo" />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="reservas"
-                  stroke="#1f7a8c"
-                  strokeWidth={2}
-                />
+                <Line type="monotone" dataKey="reservas" stroke="#1f7a8c" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -328,31 +304,24 @@ const COLORS = [
             <div className="parametros">
               <label>
                 Top N:
-                <input
-                  type="number"
-                  value={topN}
-                  min="1"
-                  onChange={(e) => setTopN(Number(e.target.value))}
-                />
+                <input type="number" value={topN} min="1" onChange={(e) => setTopN(Number(e.target.value))} />
               </label>
               <button onClick={cargarCanchasMasUsadas}>Actualizar</button>
-
-                <button
-                    onClick={() =>
-                        generarReportePDF(
-                            `Canchas más utilizadas - Top ${topN}`,
-                            canchasMasUsadas,
-                            {
-                                autor: "Área Administrativa",
-                                empresa: "CONTROL RISK S.R.L.",
-                                campos: ["cancha", "reservas", "porcentaje"],
-                            }
-                        )
+              <button
+                onClick={() =>
+                  generarReportePDF(
+                    `Canchas más utilizadas - Top ${topN}`,
+                    canchasMasUsadas,
+                    {
+                      autor: "Área Administrativa",
+                      empresa: "CONTROL RISK S.R.L.",
+                      campos: ["cancha", "reservas", "porcentaje"],
                     }
-                >
-                    Ver Reporte
-                </button>
-
+                  )
+                }
+              >
+                Ver Reporte
+              </button>
             </div>
           </div>
 
@@ -360,7 +329,7 @@ const COLORS = [
             <ResponsiveContainer width="100%" height={300}>
               <PieChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
                 <Pie
-                  data={canchasMasUsadas}
+                  data={canchasMasUsadas || []}
                   dataKey="porcentaje"
                   nameKey="cancha"
                   cx="50%"
@@ -371,20 +340,12 @@ const COLORS = [
                   label={({ name, value }) => `${name} (${value}%)`}
                   labelLine={false}
                 >
-                  {canchasMasUsadas.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
+                  {(canchasMasUsadas || []).map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend
-                  verticalAlign="bottom"
-                  align="center"
-                  layout="horizontal"
-                  wrapperStyle={{ marginTop: 10, fontSize: 13 }}
-                />
+                <Legend verticalAlign="bottom" align="center" layout="horizontal" wrapperStyle={{ marginTop: 10, fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -397,54 +358,46 @@ const COLORS = [
             <div className="parametros">
               <label>
                 Año:
-                <input
-                  type="number"
-                  value={año}
-                  onChange={(e) => setAño(Number(e.target.value))}
-                />
+                <input type="number" value={año} onChange={(e) => setAño(Number(e.target.value))} />
               </label>
               <button onClick={cargarUtilizacion}>Actualizar</button>
-
-                <button
-                    onClick={() =>
-                        generarReportePDF(
-                            `Utilización mensual de canchas (${año})`,
-                            utilizacion,
-                            {
-                                autor: "Área Administrativa",
-                                empresa: "CONTROL RISK S.R.L.",
-                                campos: Object.keys(utilizacion[0] || {}),
-                            }
-                        )
+              <button
+                onClick={() =>
+                  generarReportePDF(
+                    `Utilización mensual de canchas (${año})`,
+                    utilizacion,
+                    {
+                      autor: "Área Administrativa",
+                      empresa: "CONTROL RISK S.R.L.",
+                      campos: Object.keys(utilizacion[0] || {}),
                     }
-                >
-                    Ver Reporte
-                </button>
-
+                  )
+                }
+              >
+                Ver Reporte
+              </button>
             </div>
           </div>
 
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={utilizacion}>
+              <BarChart data={utilizacion || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="cancha" />
                 <YAxis />
                 <Tooltip />
-                  {COLORS.map((color, i) => (
-                      <Bar
-                          key={i}
-                          dataKey={`Mes ${i + 1}`}
-                          stackId="a"
-                          fill={color}
-                      />
-                  ))}
+                {(COLORS || []).map((color, i) => (
+                  <Bar key={i} dataKey={`Mes ${i + 1}`} stackId="a" fill={color} />
+                ))}
                 <Legend />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
       </div>
     </div>
   );
 }
+
+

@@ -1,12 +1,14 @@
 // src/services/reporteService.js
 const API_URL = "http://127.0.0.1:8000/api/reportes";
 
-export async function getReservasPorCliente(idCliente) {
-  const res = await fetch(`${API_URL}/reservas-cliente/${idCliente}`);
-  if (!res.ok) throw new Error("Error al obtener reservas por cliente");
+export async function getReservasPorCliente(idCliente, fechaInicio, fechaFin) {
+  const url = `${API_URL}/reservas-cliente?id_cliente=${idCliente}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+  const res = await fetch(url);
   const data = await res.json();
-  return data.reservas || [];
+  return data; // Devuelve { cliente, reservas }
 }
+
+
 
 export async function getReservasPorCancha(idCancha, fechaInicio, fechaFin) {
   const url = `http://127.0.0.1:8000/api/reportes/reservas-cancha?id_cancha=${idCancha}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;

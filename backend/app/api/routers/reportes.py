@@ -12,10 +12,20 @@ service = ReportesService()
 # ============================
 # 1️⃣ Listado de reservas por cliente
 # ============================
-@router.get("/reservas-cliente/{id_cliente}", summary="Listado de reservas por cliente")
-def reporte_reservas_por_cliente(id_cliente: int):
+from datetime import date
+
+@router.get("/reservas-cliente", summary="Listado de reservas por cliente")
+def reporte_reservas_por_cliente(
+    id_cliente: int = Query(..., description="ID del cliente"),
+    fecha_inicio: date = Query(..., description="Fecha inicial (YYYY-MM-DD)"),
+    fecha_fin: date = Query(..., description="Fecha final (YYYY-MM-DD)")
+):
     try:
-        return service.generar_reporte_reservas_por_cliente(id_cliente)
+        return service.generar_reporte_reservas_por_cliente(
+            id_cliente=id_cliente,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

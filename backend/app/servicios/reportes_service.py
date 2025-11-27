@@ -23,11 +23,13 @@ class ReportesService:
     # =====================================================
     # 1️⃣ REPORTE: Reservas por cliente
     # =====================================================
-    def generar_reporte_reservas_por_cliente(self, id_cliente: int):
-        """Devuelve todas las reservas hechas por un cliente con detalles completos."""
-        reservas = self.reserva_repo.obtener_por_cliente(id_cliente)
+    def generar_reporte_reservas_por_cliente(self, id_cliente: int, fecha_inicio: date, fecha_fin: date):
+        """Devuelve todas las reservas hechas por un cliente con detalles completos, opcionalmente filtradas por fechas."""
+        # 🧩 Pasamos los filtros de fechas al repositorio
+        reservas = self.reserva_repo.obtener_por_cliente(id_cliente, fecha_inicio, fecha_fin)
+
         if not reservas:
-            return {"mensaje": "El cliente no tiene reservas registradas."}
+            return {"mensaje": "El cliente no tiene reservas registradas para esas fechas."}
 
         cliente = self.usuario_repo.obtener_por_id(id_cliente)
         reporte = {
@@ -44,7 +46,6 @@ class ReportesService:
             cancha = self.cancha_repo.obtener_por_id(reserva.id_cancha)
             turno = self.turno_repo.obtener_por_id(reserva.id_turno)
 
-            # Los servicios no tienen 'nombre', devolvemos flags descriptivos
             servicio_info = None
             if reserva.id_servicio:
                 servicio = self.servicio_repo.obtener_por_id(reserva.id_servicio)

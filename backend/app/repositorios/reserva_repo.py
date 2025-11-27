@@ -38,8 +38,25 @@ class ReservaRepository(BaseRepository):
     def eliminar(self, id_reserva):
         self.ejecutar("DELETE FROM Reserva WHERE id_reserva=?", (id_reserva,))
 
-    def obtener_por_cliente(self, id_cliente):
-        filas = self.obtener_todos("SELECT * FROM Reserva WHERE id_cliente=?", (id_cliente,))
+    def obtener_por_cliente(self, id_cliente, fecha_inicio=None, fecha_fin=None):
+        """
+        Devuelve las reservas de un cliente, opcionalmente filtradas por un rango de fechas.
+        fecha_inicio y fecha_fin deben ser strings en formato 'YYYY-MM-DD' o None.
+        """
+        query = "SELECT r.* FROM Reserva r JOIN Turno t ON r.id_turno = t.id_turno WHERE r.id_cliente = ?"
+        params = [id_cliente]
+
+        if fecha_inicio and fecha_fin:
+            query += " AND t.fecha BETWEEN ? AND ?"
+            params.extend([fecha_inicio, fecha_fin])
+        elif fecha_inicio:
+            query += " AND t.fecha >= ?"
+            params.append(fecha_inicio)
+        elif fecha_fin:
+            query += " AND t.fecha <= ?"
+            params.append(fecha_fin)
+
+        filas = self.obtener_todos(query, tuple(params))
         return [Reserva(**f) for f in filas]
 
     def obtener_reservas_por_cancha_y_periodo(self, id_cancha, fecha_inicio, fecha_fin):
