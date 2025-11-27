@@ -551,7 +551,7 @@ const ReservaForm = ({ onSuccess, onCancel }) => {
             <button
               type="button"
               onClick={step === 1 ? onCancel : handleBack}
-              className="btn btn-outline-secondary"
+              className="btn btn-secondary"
               disabled={loading || step === 4}
             >
               {step === 1 ? "Cancelar" : "Anterior"}
