@@ -23,6 +23,10 @@ Antes de comenzar, asegurarse de tener instalado:
 -Python 3.10 o superior
 -pip
 
+### NUEVO!
+
+-bootstrap
+
 Verificar las versiones instaladas:
 -node -v
 -npm -v
@@ -34,10 +38,11 @@ Acceder al directorio del frontend:
 
 Instalar las dependencias:
 -npm install
+-npm install bootstrap
+-npm install react-datepicker date-fns
 
 Iniciar el entorno de desarrollo:
 -npm run dev
-
 
 El proyecto quedará disponible en el navegador en:
 http://localhost:5173
