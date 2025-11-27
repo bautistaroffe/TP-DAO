@@ -269,70 +269,95 @@ export default function ReportesPage() {
         {/* === 1️⃣ Reservas por cliente === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>
+            <h4>
               Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}
-            </h3>
+            </h4>
             <div className="parametros">
-              <label>Cliente: </label>
-              <select value={idCliente} onChange={handleClienteChange}>
-                <option value={0}>Seleccionar cliente...</option>
-                {clientes.map((c) => (
-                  <option key={c.id_usuario} value={c.id_usuario}>
-                    {c.nombre} {c.apellido}
-                  </option>
-                ))}
-              </select>
-
-              <label>
-                Desde:
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Cliente: </label>
+                <select value={idCliente} onChange={handleClienteChange}>
+                  <option value={0}>Seleccionar cliente...</option>
+                  {clientes.map((c) => (
+                    <option key={c.id_usuario} value={c.id_usuario}>
+                      {c.nombre} {c.apellido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-2 w-100">
+                <label
+                  htmlFor="fechaInicio"
+                  className="form-label fw-semibold w-25"
+                >
+                  Desde:
+                </label>
                 <input
+                  id="fechaInicio"
                   type="date"
                   value={fechaInicio}
                   onChange={(e) => setFechaInicio(e.target.value)}
                 />
-              </label>
-              <label>
-                Hasta:
+              </div>
+              <div className="mb-2 w-100">
+                <label
+                  htmlFor="fechaFin"
+                  className="form-label fw-semibold w-25"
+                >
+                  Hasta:
+                </label>
                 <input
+                  id="fechaFin"
                   type="date"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
                 />
+              </div>
+              <div className="mb-3 w-100" style={{ backgroundColor: "white" }}>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={cargarReservasCliente}
+                >
+                  Actualizar
+                </button>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={() =>
+                    generarReportePDF(
+                      `Reporte de Reservas del Cliente #${idCliente}`,
+                      reservasCliente,
+                      {
+                        autor: "Área Administrativa",
+                        empresa: "CONTROL RISK S.R.L.",
+                        campos: ["cancha", "monto", "cantidad"],
+                      }
+                    )
+                  }
+                >
+                  Ver Reporte
+                </button>
+              </div>
+
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={modoReservasCliente === "cantidad"}
+                  onChange={(e) =>
+                    setModoReservasCliente(
+                      e.target.checked ? "cantidad" : "monto"
+                    )
+                  }
+                />
+                <span className="slider"></span>
+                <span className="label-text">
+                  {modoReservasCliente === "monto"
+                    ? "Monto total"
+                    : "Cantidad de reservas"}
+                </span>
               </label>
-              <button onClick={cargarReservasCliente}>Actualizar</button>
-              <button
-                onClick={() =>
-                  generarReportePDF(
-                    `Reporte de Reservas del Cliente #${idCliente}`,
-                    reservasCliente,
-                    {
-                      autor: "Área Administrativa",
-                      empresa: "CONTROL RISK S.R.L.",
-                      campos: ["cancha", "monto", "cantidad"],
-                    }
-                  )
-                }
-              >
-                Ver Reporte
-              </button>
             </div>
           </div>
-
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={modoReservasCliente === "cantidad"}
-              onChange={(e) =>
-                setModoReservasCliente(e.target.checked ? "cantidad" : "monto")
-              }
-            />
-            <span className="slider"></span>
-            <span className="label-text">
-              {modoReservasCliente === "monto"
-                ? "Monto total"
-                : "Cantidad de reservas"}
-            </span>
-          </label>
 
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
