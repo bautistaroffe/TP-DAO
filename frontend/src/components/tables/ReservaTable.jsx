@@ -11,8 +11,6 @@ const ReservaTable = ({ refreshKey }) => {
   const [confirmId, setConfirmId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // (Edición removida) Solo habilitado eliminación desde tabla
-
   // Lógica de carga de datos
   const loadReservas = async () => {
     try {
@@ -59,8 +57,6 @@ const ReservaTable = ({ refreshKey }) => {
   // Lógica de Acciones
   // ---------------------------------
 
-  // handleModificar removed: edits handled elsewhere or not allowed
-
   const handleEliminar = (id_reserva) => {
     setConfirmId(id_reserva); // Abre el modal de confirmación
   };
@@ -81,7 +77,8 @@ const ReservaTable = ({ refreshKey }) => {
       await reservaService.eliminarReserva(idToDelete);
 
       // Actualiza la lista en el estado
-      setReservas((prev) => prev.filter((r) => r.id_reserva !== idToDelete));
+      //setReservas((prev) => prev.filter((r) => r.id_reserva !== idToDelete));
+      loadReservas(); // Recarga la lista completa desde el backend
       console.log(`Reserva ${idToDelete} eliminada con éxito.`);
     } catch (err) {
       // Captura el mensaje de error detallado del servicio
@@ -92,8 +89,6 @@ const ReservaTable = ({ refreshKey }) => {
       cancelDeletion(); // Cierra el modal de confirmación
     }
   };
-
-  // Edit handling removed. Only deletion is allowed from this table.
 
   // Encuentra la reserva a eliminar para mostrar el ID en el modal
   const reservaToDelete = reservas.find((r) => r.id_reserva === confirmId);
@@ -303,8 +298,6 @@ const ReservaTable = ({ refreshKey }) => {
           </div>
         </div>
       )}
-
-      {/* Edición removida — solo eliminación disponible desde la tabla */}
     </div>
   );
 };
