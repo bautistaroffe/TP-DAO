@@ -1,8 +1,19 @@
 // src/pages/Reportes.jsx
 import { useEffect, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import {
   getUtilizacionMensual,
@@ -12,11 +23,15 @@ import {
 } from "../services/reporteService";
 import "../styles/pages.css";
 import { generarReportePDF } from "../utils/pdfReportGenerator";
+import { usuarioService } from "../services/usuarioService.js";
+import { canchaService } from "../services/canchaService.js";
+import { set } from "date-fns";
 
 export default function ReportesPage() {
   const [utilizacion, setUtilizacion] = useState([]);
   const [reservasCliente, setReservasCliente] = useState([]);
   const [clienteInfo, setClienteInfo] = useState({});
+  const [canchaInfo, setCanchaInfo] = useState({});
   const [canchasMasUsadas, setCanchasMasUsadas] = useState([]);
   const [reservasCancha, setReservasCancha] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,12 +45,64 @@ export default function ReportesPage() {
   const [topN, setTopN] = useState(5);
   const [año, setAño] = useState(2025);
 
+  const [clientes, setClientes] = useState([]);
+  const [canchas, setCanchas] = useState([]);
+
   const COLORS = [
-    "#0d1b2a", "#142b46", "#1e3a8a", "#2c5282", "#35658f",
-    "#457b9d", "#5a8eb1", "#7baac4", "#98c1d9", "#b2d0e0",
-    "#cddde7", "#E2E8F0"
+    "#0d1b2a",
+    "#142b46",
+    "#1e3a8a",
+    "#2c5282",
+    "#35658f",
+    "#457b9d",
+    "#5a8eb1",
+    "#7baac4",
+    "#98c1d9",
+    "#b2d0e0",
+    "#cddde7",
+    "#E2E8F0",
   ];
 
+  async function fetchClientes() {
+    try {
+      const data = await usuarioService.obtenerUsuarios();
+      setClientes(data || []);
+    } catch (err) {
+      console.error("❌ Error al cargar los clientes:", err);
+      setClientes([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function fetchCanchas() {
+    try {
+      const data = await canchaService.obtenerCanchas();
+      setCanchas(data || []);
+    } catch (err) {
+      console.error("❌ Error al cargar las canchas:", err);
+      setCanchas([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+  // === Handlers para selects ===
+  function handleClienteChange(e) {
+    const val = e.target.value;
+    const parsed = Number(val);
+    const id = Number.isNaN(parsed) ? 0 : parsed;
+    setIdCliente(id);
+    const clienteObj = clientes.find((c) => c.id_usuario === id) || {};
+    setClienteInfo(clienteObj);
+  }
+
+  function handleCanchaChange(e) {
+    const val = e.target.value;
+    const parsed = Number(val);
+    const id = Number.isNaN(parsed) ? 0 : parsed;
+    setIdCancha(id);
+    const canchaObj = canchas.find((c) => c.id_cancha === id) || {};
+    setCanchaInfo(canchaObj);
+  }
   // === Funciones por reporte ===
   async function cargarReservasCliente() {
     if (!idCliente || idCliente < 1) return alert("ID de cliente inválido");
@@ -45,22 +112,29 @@ export default function ReportesPage() {
 
     setLoading(true);
     try {
-      const dataCliente = await getReservasPorCliente(idCliente, fechaInicio, fechaFin);
+      const dataCliente = await getReservasPorCliente(
+        idCliente,
+        fechaInicio,
+        fechaFin
+      );
       const reservasData = dataCliente?.reservas || [];
       setClienteInfo(dataCliente?.cliente || {});
 
       const clientesMap = {};
       reservasData.forEach((r) => {
-        if (!clientesMap[r.cancha]) clientesMap[r.cancha] = { monto: 0, cantidad: 0 };
+        if (!clientesMap[r.cancha])
+          clientesMap[r.cancha] = { monto: 0, cantidad: 0 };
         clientesMap[r.cancha].monto += r.precio_total || 0;
         clientesMap[r.cancha].cantidad += 1;
       });
 
-      const chartReservas = Object.entries(clientesMap).map(([cancha, data]) => ({
-        cancha,
-        monto: data.monto,
-        cantidad: data.cantidad,
-      }));
+      const chartReservas = Object.entries(clientesMap).map(
+        ([cancha, data]) => ({
+          cancha,
+          monto: data.monto,
+          cantidad: data.cantidad,
+        })
+      );
       setReservasCliente(chartReservas);
     } catch (err) {
       console.error("❌ Error al cargar reservas por cliente:", err);
@@ -71,87 +145,91 @@ export default function ReportesPage() {
     }
   }
 
-async function cargarReservasCancha() {
-  if (!idCancha || idCancha < 1) return alert("ID de cancha inválido");
-  if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
-  if (new Date(fechaInicio) > new Date(fechaFin))
-    return alert("La fecha inicial no puede ser posterior a la final");
+  async function cargarReservasCancha() {
+    if (!idCancha || idCancha < 1) return alert("ID de cancha inválido");
+    if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
+    if (new Date(fechaInicio) > new Date(fechaFin))
+      return alert("La fecha inicial no puede ser posterior a la final");
 
-  setLoading(true);
-  try {
-    const periodo = await getReservasPorCancha(idCancha, fechaInicio, fechaFin);
-    const reservas = periodo?.reservas || [];
+    setLoading(true);
+    try {
+      const periodo = await getReservasPorCancha(
+        idCancha,
+        fechaInicio,
+        fechaFin
+      );
+      const reservas = periodo?.reservas || [];
 
-    const fechaInicioObj = new Date(periodo?.desde || fechaInicio);
-    const fechaFinObj = new Date(periodo?.hasta || fechaFin);
-    const diffDias = (fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24);
+      const fechaInicioObj = new Date(periodo?.desde || fechaInicio);
+      const fechaFinObj = new Date(periodo?.hasta || fechaFin);
+      const diffDias = (fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24);
 
-    let saltoDias = 1;
-    if (diffDias > 60) saltoDias = 30;
-    else if (diffDias > 30) saltoDias = 15;
-    else if (diffDias > 5) saltoDias = 5;
+      let saltoDias = 1;
+      if (diffDias > 60) saltoDias = 30;
+      else if (diffDias > 30) saltoDias = 15;
+      else if (diffDias > 5) saltoDias = 5;
 
-    const intervalos = [];
-    let cursor = new Date(fechaInicioObj);
-    while (cursor <= fechaFinObj) {
-      const siguiente = new Date(cursor);
-      siguiente.setDate(cursor.getDate() + saltoDias);
-      intervalos.push({
-        inicio: new Date(cursor),
-        fin: siguiente < fechaFinObj ? new Date(siguiente) : fechaFinObj,
-      });
-      cursor = siguiente;
-    }
-
-    // Función para formatear fecha como DD/MM
-    function formatDate(d) {
-      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
-    }
-
-    const counts = intervalos.map(({ inicio, fin }) => {
-      const count = reservas.filter((r) => {
-        const fechaReserva = new Date(r.fecha_turno);
-        return fechaReserva >= inicio && fechaReserva < fin;
-      }).length;
-
-      let etiqueta = "";
-      if (saltoDias >= 30) {
-        etiqueta = inicio.toLocaleString("default", { month: "short" });
-      } else {
-        etiqueta = `${formatDate(inicio)}–${formatDate(fin)}`;
+      const intervalos = [];
+      let cursor = new Date(fechaInicioObj);
+      while (cursor <= fechaFinObj) {
+        const siguiente = new Date(cursor);
+        siguiente.setDate(cursor.getDate() + saltoDias);
+        intervalos.push({
+          inicio: new Date(cursor),
+          fin: siguiente < fechaFinObj ? new Date(siguiente) : fechaFinObj,
+        });
+        cursor = siguiente;
       }
 
-      return { periodo: etiqueta, reservas: count };
-    });
+      // Función para formatear fecha como DD/MM
+      function formatDate(d) {
+        return `${String(d.getDate()).padStart(2, "0")}/${String(
+          d.getMonth() + 1
+        ).padStart(2, "0")}`;
+      }
 
-    setReservasCancha(counts);
-  } catch (err) {
-    console.error("❌ Error al cargar reservas por cancha:", err);
-    setReservasCancha([]);
-  } finally {
-    setLoading(false);
+      const counts = intervalos.map(({ inicio, fin }) => {
+        const count = reservas.filter((r) => {
+          const fechaReserva = new Date(r.fecha_turno);
+          return fechaReserva >= inicio && fechaReserva < fin;
+        }).length;
+
+        let etiqueta = "";
+        if (saltoDias >= 30) {
+          etiqueta = inicio.toLocaleString("default", { month: "short" });
+        } else {
+          etiqueta = `${formatDate(inicio)}–${formatDate(fin)}`;
+        }
+
+        return { periodo: etiqueta, reservas: count };
+      });
+
+      setReservasCancha(counts);
+    } catch (err) {
+      console.error("❌ Error al cargar reservas por cancha:", err);
+      setReservasCancha([]);
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   async function cargarCanchasMasUsadas() {
-  if (!topN || topN < 1) return alert("Top N inválido");
-  if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
-  if (new Date(fechaInicio) > new Date(fechaFin))
-    return alert("La fecha inicial no puede ser posterior a la final");
+    if (!topN || topN < 1) return alert("Top N inválido");
+    if (!fechaInicio || !fechaFin) return alert("Seleccioná fechas válidas");
+    if (new Date(fechaInicio) > new Date(fechaFin))
+      return alert("La fecha inicial no puede ser posterior a la final");
 
-  setLoading(true);
-  try {
-    const masUsadas = await getCanchasMasUsadas(topN, fechaInicio, fechaFin);
-    setCanchasMasUsadas(masUsadas?.ranking || []);
-  } catch (err) {
-    console.error("❌ Error al cargar canchas más usadas:", err);
-    setCanchasMasUsadas([]);
-  } finally {
-    setLoading(false);
+    setLoading(true);
+    try {
+      const masUsadas = await getCanchasMasUsadas(topN, fechaInicio, fechaFin);
+      setCanchasMasUsadas(masUsadas?.ranking || []);
+    } catch (err) {
+      console.error("❌ Error al cargar canchas más usadas:", err);
+      setCanchasMasUsadas([]);
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   async function cargarUtilizacion() {
     if (!año || año < 2000 || año > 2100) return alert("Año inválido");
@@ -176,6 +254,8 @@ async function cargarReservasCancha() {
     cargarReservasCancha();
     cargarCanchasMasUsadas();
     cargarUtilizacion();
+    fetchClientes();
+    fetchCanchas();
   }, []);
 
   if (loading) return <p>Cargando reportes...</p>;
@@ -186,61 +266,98 @@ async function cargarReservasCancha() {
       <p>Evaluá el rendimiento del sistema con parámetros configurables.</p>
 
       <div className="reportes-grid">
-
         {/* === 1️⃣ Reservas por cliente === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}</h3>
+            <h4>
+              Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}
+            </h4>
             <div className="parametros">
-              <label>
-                ID Cliente:
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Cliente: </label>
+                <select value={idCliente} onChange={handleClienteChange}>
+                  <option value={0}>Seleccionar cliente...</option>
+                  {clientes.map((c) => (
+                    <option key={c.id_usuario} value={c.id_usuario}>
+                      {c.nombre} {c.apellido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-2 w-100">
+                <label
+                  htmlFor="fechaInicio"
+                  className="form-label fw-semibold w-25"
+                >
+                  Desde:
+                </label>
                 <input
-                  type="number"
-                  value={idCliente}
-                  min="1"
-                  onChange={(e) => setIdCliente(Number(e.target.value))}
+                  id="fechaInicio"
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
                 />
+              </div>
+              <div className="mb-2 w-100">
+                <label
+                  htmlFor="fechaFin"
+                  className="form-label fw-semibold w-25"
+                >
+                  Hasta:
+                </label>
+                <input
+                  id="fechaFin"
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                />
+              </div>
+              <div className="mb-3 w-100" style={{ backgroundColor: "white" }}>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={cargarReservasCliente}
+                >
+                  Actualizar
+                </button>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={() =>
+                    generarReportePDF(
+                      `Reporte de Reservas del Cliente #${idCliente}`,
+                      reservasCliente,
+                      {
+                        autor: "Área Administrativa",
+                        empresa: "CONTROL RISK S.R.L.",
+                        campos: ["cancha", "monto", "cantidad"],
+                      }
+                    )
+                  }
+                >
+                  Ver Reporte
+                </button>
+              </div>
+
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={modoReservasCliente === "cantidad"}
+                  onChange={(e) =>
+                    setModoReservasCliente(
+                      e.target.checked ? "cantidad" : "monto"
+                    )
+                  }
+                />
+                <span className="slider"></span>
+                <span className="label-text">
+                  {modoReservasCliente === "monto"
+                    ? "Monto total"
+                    : "Cantidad de reservas"}
+                </span>
               </label>
-              <label>
-                Desde:
-                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-              </label>
-              <label>
-                Hasta:
-                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
-              </label>
-              <button onClick={cargarReservasCliente}>Actualizar</button>
-              <button
-                onClick={() =>
-                  generarReportePDF(
-                    `Reporte de Reservas del Cliente #${idCliente}`,
-                    reservasCliente,
-                    {
-                      autor: "Área Administrativa",
-                      empresa: "CONTROL RISK S.R.L.",
-                      campos: ["cancha", "monto", "cantidad"],
-                    }
-                  )
-                }
-              >
-                Ver Reporte
-              </button>
             </div>
           </div>
-
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={modoReservasCliente === "cantidad"}
-              onChange={(e) =>
-                setModoReservasCliente(e.target.checked ? "cantidad" : "monto")
-              }
-            />
-            <span className="slider"></span>
-            <span className="label-text">
-              {modoReservasCliente === "monto" ? "Monto total" : "Cantidad de reservas"}
-            </span>
-          </label>
 
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
@@ -248,10 +365,18 @@ async function cargarReservasCancha() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="cancha" />
                 <YAxis />
-                <Tooltip formatter={(v) => (modoReservasCliente === "monto" ? `$${v.toLocaleString()}` : v)} />
+                <Tooltip
+                  formatter={(v) =>
+                    modoReservasCliente === "monto"
+                      ? `$${v.toLocaleString()}`
+                      : v
+                  }
+                />
                 <Bar
                   key={modoReservasCliente}
-                  dataKey={modoReservasCliente === "monto" ? "monto" : "cantidad"}
+                  dataKey={
+                    modoReservasCliente === "monto" ? "monto" : "cantidad"
+                  }
                   fill={COLORS[1]}
                 />
               </BarChart>
@@ -264,17 +389,31 @@ async function cargarReservasCancha() {
           <div className="report-info">
             <h3>Reservas por cancha (período)</h3>
             <div className="parametros">
-              <label>
-                ID Cancha:
-                <input type="number" value={idCancha} min="1" onChange={(e) => setIdCancha(Number(e.target.value))} />
-              </label>
+              <label>Cancha:</label>
+              <select value={idCancha} onChange={handleCanchaChange}>
+                <option value="0">Seleccionar cancha...</option>
+                {canchas.map((ca) => (
+                  <option key={ca.id_cancha} value={ca.id_cancha}>
+                    {ca.nombre} - {ca.tipo}
+                  </option>
+                ))}
+              </select>
+
               <label>
                 Desde:
-                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                />
               </label>
               <label>
                 Hasta:
-                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+                <input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                />
               </label>
               <button onClick={cargarReservasCancha}>Actualizar</button>
               <button
@@ -302,7 +441,12 @@ async function cargarReservasCancha() {
                 <XAxis dataKey="periodo" />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Line type="monotone" dataKey="reservas" stroke="#1f7a8c" strokeWidth={2} />
+                <Line
+                  type="monotone"
+                  dataKey="reservas"
+                  stroke="#1f7a8c"
+                  strokeWidth={2}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -315,15 +459,28 @@ async function cargarReservasCancha() {
             <div className="parametros">
               <label>
                 Top N:
-                <input type="number" value={topN} min="1" onChange={(e) => setTopN(Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={topN}
+                  min="1"
+                  onChange={(e) => setTopN(Number(e.target.value))}
+                />
               </label>
               <label>
                 Desde:
-                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                />
               </label>
               <label>
                 Hasta:
-                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+                <input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                />
               </label>
               <button onClick={cargarCanchasMasUsadas}>Actualizar</button>
               <button
@@ -360,16 +517,23 @@ async function cargarReservasCancha() {
                   labelLine={false}
                 >
                   {(canchasMasUsadas || []).map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend verticalAlign="bottom" align="center" layout="horizontal" wrapperStyle={{ marginTop: 10, fontSize: 13 }} />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  layout="horizontal"
+                  wrapperStyle={{ marginTop: 10, fontSize: 13 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
-
 
         {/* === 4️⃣ Utilización mensual === */}
         <div className="report-line">
@@ -378,7 +542,11 @@ async function cargarReservasCancha() {
             <div className="parametros">
               <label>
                 Año:
-                <input type="number" value={año} onChange={(e) => setAño(Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={año}
+                  onChange={(e) => setAño(Number(e.target.value))}
+                />
               </label>
               <button onClick={cargarUtilizacion}>Actualizar</button>
               <button
@@ -407,17 +575,19 @@ async function cargarReservasCancha() {
                 <YAxis />
                 <Tooltip />
                 {(COLORS || []).map((color, i) => (
-                  <Bar key={i} dataKey={`Mes ${i + 1}`} stackId="a" fill={color} />
+                  <Bar
+                    key={i}
+                    dataKey={`Mes ${i + 1}`}
+                    stackId="a"
+                    fill={color}
+                  />
                 ))}
                 <Legend />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
-
       </div>
     </div>
   );
 }
-
-
