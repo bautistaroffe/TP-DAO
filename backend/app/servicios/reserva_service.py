@@ -137,11 +137,9 @@ class ReservaService:
         reserva = repo_reserva.obtener_por_id(id_reserva)
         if not reserva:
             raise ValueError("Reserva no encontrada.")
-        if reserva.estado not in ("pendiente", "confirmada"):
-            raise ValueError("Solo se pueden cancelar reservas pendientes o confirmadas.")
-
-        pago = repo_pago.obtener_por_reserva(id_reserva)
-        if pago:
+        if reserva.estado not in ("pendiente"):
+            raise ValueError("Solo se pueden cancelar reservas pendientes.")
+        if reserva.estado == "confirmada":
             raise ValueError("No se puede cancelar una reserva que ya fue pagada.")
 
         # 2. Iniciar transacción
@@ -151,7 +149,6 @@ class ReservaService:
             reserva.estado = "cancelada"
             repo_reserva.actualizar(reserva)
 
-            # 🟢 Escritura 2: Marcar Turno como disponible (FORZAMOS A USAR CONEXIÓN DE REPO_RESERVA)
             repo_reserva.ejecutar("""
                 UPDATE Turno
                 SET estado = 'disponible'
@@ -164,7 +161,6 @@ class ReservaService:
             return {"mensaje": f"Reserva {id_reserva} cancelada correctamente."}
 
         except Exception as e:
-            # 4. Revertir
             repo_reserva.revertir_transaccion()
             raise e
 

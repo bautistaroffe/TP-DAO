@@ -387,50 +387,61 @@ export default function ReportesPage() {
         {/* === 2️⃣ Reservas por cancha === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>Reservas por cancha (período)</h3>
+            <h4>Reservas por cancha (período)</h4>
             <div className="parametros">
-              <label>Cancha:</label>
-              <select value={idCancha} onChange={handleCanchaChange}>
-                <option value="0">Seleccionar cancha...</option>
-                {canchas.map((ca) => (
-                  <option key={ca.id_cancha} value={ca.id_cancha}>
-                    {ca.nombre} - {ca.tipo}
-                  </option>
-                ))}
-              </select>
-
-              <label>
-                Desde:
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Cancha:</label>
+                <select value={idCancha} onChange={handleCanchaChange}>
+                  <option value="0">Seleccionar cancha...</option>
+                  {canchas.map((ca) => (
+                    <option key={ca.id_cancha} value={ca.id_cancha}>
+                      {ca.nombre} - {ca.tipo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Desde:</label>
                 <input
                   type="date"
                   value={fechaInicio}
                   onChange={(e) => setFechaInicio(e.target.value)}
                 />
-              </label>
-              <label>
-                Hasta:
+              </div>
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Desde:</label>
                 <input
                   type="date"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
                 />
-              </label>
-              <button onClick={cargarReservasCancha}>Actualizar</button>
-              <button
-                onClick={() =>
-                  generarReportePDF(
-                    `Reservas de la Cancha #${idCancha}`,
-                    reservasCancha,
-                    {
-                      autor: "Área Administrativa",
-                      empresa: "CONTROL RISK S.R.L.",
-                      campos: ["periodo", "reservas"],
-                    }
-                  )
-                }
-              >
-                Ver Reporte
-              </button>
+              </div>
+              <div className="mb-2 w-100">
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={cargarReservasCancha}
+                >
+                  Actualizar
+                </button>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={() =>
+                    generarReportePDF(
+                      `Reservas de la Cancha #${idCancha}`,
+                      reservasCancha,
+                      {
+                        autor: "Área Administrativa",
+                        empresa: "CONTROL RISK S.R.L.",
+                        campos: ["periodo", "reservas"],
+                      }
+                    )
+                  }
+                >
+                  Ver Reporte
+                </button>
+              </div>
             </div>
           </div>
 
@@ -457,47 +468,57 @@ export default function ReportesPage() {
           <div className="report-info">
             <h3>Canchas más utilizadas</h3>
             <div className="parametros">
-              <label>
-                Top N:
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Top N:</label>
                 <input
                   type="number"
                   value={topN}
                   min="1"
                   onChange={(e) => setTopN(Number(e.target.value))}
                 />
-              </label>
-              <label>
-                Desde:
+              </div>
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Desde:</label>
                 <input
                   type="date"
                   value={fechaInicio}
                   onChange={(e) => setFechaInicio(e.target.value)}
                 />
-              </label>
-              <label>
-                Hasta:
+              </div>
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Hasta:</label>
                 <input
                   type="date"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
                 />
-              </label>
-              <button onClick={cargarCanchasMasUsadas}>Actualizar</button>
-              <button
-                onClick={() =>
-                  generarReportePDF(
-                    `Canchas más utilizadas - Top ${topN}`,
-                    canchasMasUsadas,
-                    {
-                      autor: "Área Administrativa",
-                      empresa: "CONTROL RISK S.R.L.",
-                      campos: ["cancha", "reservas", "porcentaje"],
-                    }
-                  )
-                }
-              >
-                Ver Reporte
-              </button>
+              </div>
+              <div className="mb-2 w-100">
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={cargarCanchasMasUsadas}
+                >
+                  Actualizar
+                </button>
+                <button
+                  className="btn me-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={() =>
+                    generarReportePDF(
+                      `Canchas más utilizadas - Top ${topN}`,
+                      canchasMasUsadas,
+                      {
+                        autor: "Área Administrativa",
+                        empresa: "CONTROL RISK S.R.L.",
+                        campos: ["cancha", "reservas", "porcentaje"],
+                      }
+                    )
+                  }
+                >
+                  Ver Reporte
+                </button>
+              </div>
             </div>
           </div>
 
