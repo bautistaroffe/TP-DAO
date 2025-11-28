@@ -149,7 +149,6 @@ class ReservaService:
             reserva.estado = "cancelada"
             repo_reserva.actualizar(reserva)
 
-            # 🟢 Escritura 2: Marcar Turno como disponible (FORZAMOS A USAR CONEXIÓN DE REPO_RESERVA)
             repo_reserva.ejecutar("""
                 UPDATE Turno
                 SET estado = 'disponible'
@@ -162,7 +161,6 @@ class ReservaService:
             return {"mensaje": f"Reserva {id_reserva} cancelada correctamente."}
 
         except Exception as e:
-            # 4. Revertir
             repo_reserva.revertir_transaccion()
             raise e
 
