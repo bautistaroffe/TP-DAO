@@ -83,4 +83,18 @@ export const torneoService = {
   async crearTorneo(datosNuevaTorneo) {
     return this.crearOActualizarTorneo(null, datosNuevaTorneo, 'POST');
   },
+
+  async generarReservasTorneo(id_torneo, payload) {
+  const response = await fetch(`${API_BASE_URL}/${id_torneo}/reservas`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const errorDetail = await response.text();
+    throw new Error(`Error al generar reservas: ${errorDetail}`);
+  }
+  return await response.json();
+}
+
 };
