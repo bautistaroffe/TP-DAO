@@ -36,8 +36,7 @@
 }
 .home-actions button:hover {
   background-color: var(--powder-blue);
-  transform: scale(1.05) ;
-
+  transform: scale(1.05);
 }
 
 .gallery {
@@ -56,8 +55,8 @@
 }
 
 .gallery-grid img {
-  flex: 1 1 300px;   /* ocupa espacio pero se adapta */
-  max-width: 300px;  /* límite de ancho */
+  flex: 1 1 300px; /* ocupa espacio pero se adapta */
+  max-width: 300px; /* límite de ancho */
   width: 100%;
   height: 220px;
   border-radius: 14px;
@@ -87,7 +86,6 @@
    PREDIO PAGE
    ====================== */
 
-
 .predio-page {
   width: 100%;
   min-height: 100vh;
@@ -103,7 +101,6 @@
   max-width: 1100px;
   width: 100%;
 }
-
 
 .hero {
   background: linear-gradient(90deg, var(--marian-blue), var(--cerulean));
@@ -122,7 +119,7 @@
 .hero h1 {
   font-size: 2.2rem;
   margin-bottom: 0.5rem;
-    color: var(--alice-blue) !important;
+  color: var(--alice-blue) !important;
 }
 
 .hero p {
@@ -130,15 +127,13 @@
   opacity: 0.9;
 }
 
-
-
 .predio-container h2 {
   font-size: 2.2rem;
   color: #1e3a8a; /* azul profundo */
   margin-bottom: 0.5rem;
 }
 .predio-page h1 {
-  color: var(--marian-blue)
+  color: var(--marian-blue);
 }
 
 .predio-container .sub {
@@ -158,7 +153,7 @@
 
 /* === Tarjetas === */
 .card {
-  background: var(--alice-blue) ;
+  background: var(--alice-blue);
   border-radius: 8px !important;
   padding: 2rem 1.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -172,7 +167,6 @@
 .card:hover {
   transform: translateY(-6px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8);
-
 }
 
 .card h3 {
@@ -219,7 +213,6 @@
    ====================== */
 .reportes-page {
   padding: 2rem;
-
 }
 
 .report-line {
@@ -236,25 +229,31 @@
 }
 
 .report-info {
+  display: flex;
   flex: 1;
 }
 .report-chart svg {
+  display: flex;
   max-width: 100%;
 }
 
 .report-info h3 {
+  display: flex;
   margin-bottom: 0.5rem;
   color: #134611;
 }
 
 .report-info p {
+  display: flex;
   color: #555;
   font-size: 0.95rem;
 }
 
 .report-chart {
-  flex: 1.5;
+  display: flex;
+  flex: 2;
   height: 300px;
+  width: 400px;
 }
 
 .chart-placeholder {

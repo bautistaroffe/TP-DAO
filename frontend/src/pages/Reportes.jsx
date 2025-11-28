@@ -269,11 +269,11 @@ export default function ReportesPage() {
         {/* === 1️⃣ Reservas por cliente === */}
         <div className="report-line">
           <div className="report-info">
-            <h4>
-              Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}
-            </h4>
-            <div className="parametros">
-              <div className="mb-2 w-100">
+            <div className="parametros d-flex flex-column me-2">
+              <h4>
+                Reservas del Cliente: {clienteInfo.nombre || `#${idCliente}`}
+              </h4>
+              <div className="mb-2 w-100 d-flex align-items-center">
                 <label className="form-label fw-semibold w-25">Cliente: </label>
                 <select value={idCliente} onChange={handleClienteChange}>
                   <option value={0}>Seleccionar cliente...</option>
@@ -314,14 +314,14 @@ export default function ReportesPage() {
               </div>
               <div className="mb-3 w-100" style={{ backgroundColor: "white" }}>
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={cargarReservasCliente}
                 >
                   Actualizar
                 </button>
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={() =>
                     generarReportePDF(
@@ -338,7 +338,6 @@ export default function ReportesPage() {
                   Ver Reporte
                 </button>
               </div>
-
               <label className="toggle-switch">
                 <input
                   type="checkbox"
@@ -358,7 +357,6 @@ export default function ReportesPage() {
               </label>
             </div>
           </div>
-
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={reservasCliente || []}>
@@ -387,8 +385,9 @@ export default function ReportesPage() {
         {/* === 2️⃣ Reservas por cancha === */}
         <div className="report-line">
           <div className="report-info">
-            <h4>Reservas por cancha (período)</h4>
             <div className="parametros">
+              <h4>Reservas por cancha (período)</h4>
+
               <div className="mb-2 w-100">
                 <label className="form-label fw-semibold w-25">Cancha:</label>
                 <select value={idCancha} onChange={handleCanchaChange}>
@@ -418,14 +417,14 @@ export default function ReportesPage() {
               </div>
               <div className="mb-2 w-100">
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={cargarReservasCancha}
                 >
                   Actualizar
                 </button>
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={() =>
                     generarReportePDF(
@@ -444,7 +443,6 @@ export default function ReportesPage() {
               </div>
             </div>
           </div>
-
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={reservasCancha || []}>
@@ -466,8 +464,9 @@ export default function ReportesPage() {
         {/* === 3️⃣ Canchas más utilizadas === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>Canchas más utilizadas</h3>
             <div className="parametros">
+              <h4>Canchas más utilizadas</h4>
+
               <div className="mb-2 w-100">
                 <label className="form-label fw-semibold w-25">Top N:</label>
                 <input
@@ -495,14 +494,14 @@ export default function ReportesPage() {
               </div>
               <div className="mb-2 w-100">
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={cargarCanchasMasUsadas}
                 >
                   Actualizar
                 </button>
                 <button
-                  className="btn me-2"
+                  className="btn me-2 mb-2"
                   style={{ backgroundColor: "#1e3a8a", color: "white" }}
                   onClick={() =>
                     generarReportePDF(
@@ -521,7 +520,6 @@ export default function ReportesPage() {
               </div>
             </div>
           </div>
-
           <div className="report-chart">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
@@ -559,32 +557,43 @@ export default function ReportesPage() {
         {/* === 4️⃣ Utilización mensual === */}
         <div className="report-line">
           <div className="report-info">
-            <h3>Utilización mensual de canchas</h3>
             <div className="parametros">
-              <label>
-                Año:
+              <h4>Utilización mensual de canchas</h4>
+
+              <div className="mb-2 w-100">
+                <label className="form-label fw-semibold w-25">Año: </label>
                 <input
                   type="number"
                   value={año}
                   onChange={(e) => setAño(Number(e.target.value))}
                 />
-              </label>
-              <button onClick={cargarUtilizacion}>Actualizar</button>
-              <button
-                onClick={() =>
-                  generarReportePDF(
-                    `Utilización mensual de canchas (${año})`,
-                    utilizacion,
-                    {
-                      autor: "Área Administrativa",
-                      empresa: "CONTROL RISK S.R.L.",
-                      campos: Object.keys(utilizacion[0] || {}),
-                    }
-                  )
-                }
-              >
-                Ver Reporte
-              </button>
+              </div>
+              <div className="mb-3 w-100">
+                <button
+                  className="btn me-2 mb-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={cargarUtilizacion}
+                >
+                  Actualizar
+                </button>
+                <button
+                  className="btn me-2 mb-2"
+                  style={{ backgroundColor: "#1e3a8a", color: "white" }}
+                  onClick={() =>
+                    generarReportePDF(
+                      `Utilización mensual de canchas (${año})`,
+                      utilizacion,
+                      {
+                        autor: "Área Administrativa",
+                        empresa: "CONTROL RISK S.R.L.",
+                        campos: Object.keys(utilizacion[0] || {}),
+                      }
+                    )
+                  }
+                >
+                  Ver Reporte
+                </button>
+              </div>
             </div>
           </div>
 
