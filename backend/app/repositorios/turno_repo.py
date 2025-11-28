@@ -76,3 +76,35 @@ class TurnoRepository(BaseRepository):
         # Aseguramos que la fecha se pase como string si es necesario para el driver SQLite
         filas = self.obtener_todos(query, (id_cancha, str(fecha)))
         return [Turno(**dict(f)) for f in filas]
+
+    def obtener_disponibles_en_rango_completo(self, fecha_inicio, fecha_fin, hora_inicio, hora_fin, ids_canchas=None):
+        """
+        Obtiene turnos disponibles entre fechas, respetando rango horario y filtrando por canchas.
+        """
+        query = """
+            SELECT * FROM Turno
+            WHERE estado = 'disponible'
+              AND fecha BETWEEN ? AND ?
+              AND hora_inicio >= ?
+              AND hora_fin <= ?
+        """
+
+        params = [
+            str(fecha_inicio),
+            str(fecha_fin),
+            str(hora_inicio),
+            str(hora_fin)
+        ]
+
+        # Agrego filtro por canchas si corresponde
+        if ids_canchas:
+            placeholders = ",".join("?" * len(ids_canchas))
+            query += f" AND id_cancha IN ({placeholders})"
+            params.extend(ids_canchas)
+
+        query += " ORDER BY fecha ASC, hora_inicio ASC"
+
+        filas = self.obtener_todos(query, params)
+        return [Turno(**dict(f)) for f in filas]
+
+

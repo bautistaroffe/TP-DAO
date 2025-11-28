@@ -142,64 +142,6 @@ class TorneoService:
         }])
         return reservas_creadas[0]
 
-    def crear_reservas_para_torneo(self, id_torneo, reservas: list) -> list[Reserva]:
-        repo_torneo = TorneoRepository()
-        torneo = repo_torneo.obtener_por_id(id_torneo)
-        if not torneo:
-            raise ValueError("Torneo no encontrado.")
-
-        repo_reserva = ReservaRepository()
-        repo_turno = TurnoRepository()
-        repo_cancha = CanchaRepository()
-        repo_servicio = ServicioAdicionalRepository()
-
-        # 1. Iniciar transacción
-        repo_reserva.iniciar_transaccion()
-        creadas = []
-
-        try:
-            for r in reservas:
-                id_cancha = r["id_cancha"]
-                id_turno = r["id_turno"]
-                id_cliente = r["id_cliente"]
-                id_servicio = r.get("id_servicio")
-                origen = r.get("origen", "torneo")
-
-                # Las validaciones de disponibilidad se hacen con lecturas atómicas (fuera de la transacción iniciada)
-                if not self._turno_disponible(id_cancha, id_turno):
-                    raise ValueError(f"Turno {id_turno} en cancha {id_cancha} no disponible.")
-
-                cancha = repo_cancha.obtener_por_id(id_cancha)
-                servicio = repo_servicio.obtener_por_id(id_servicio) if id_servicio else None
-
-                if not cancha:
-                    raise ValueError(f"Cancha {id_cancha} no encontrada.")
-
-                reserva = Reserva(
-                    id_cancha=id_cancha,
-                    id_turno=id_turno,
-                    id_cliente=id_cliente,
-                    id_torneo=id_torneo,
-                    id_servicio=id_servicio,
-                    estado="pendiente",
-                    origen=origen
-                )
-
-                reserva.calcular_costo_reserva(cancha, servicio)
-
-                # Escrituras dentro de la transacción
-                repo_reserva.agregar(reserva)  # INSERT de reserva
-                repo_turno.marcar_como_reservado(id_turno)  # UPDATE de turno
-
-                creadas.append(reserva)
-
-            # 2. Confirmar si todo fue exitoso
-            repo_reserva.confirmar_transaccion()
-            return creadas
-        except Exception as e:
-            # 3. Revertir en caso de fallo
-            repo_reserva.revertir_transaccion()
-            raise e
 
     def cancelar_reserva_del_torneo(self, id_torneo, id_reserva):
         repo_reserva = ReservaRepository()
@@ -282,3 +224,62 @@ class TorneoService:
             # 3. Revertir
             repo_reserva.revertir_transaccion()
             raise e
+
+    def crear_reservas_para_torneo(self, id_torneo, ids_canchas: list[int],
+                                   fecha_inicio, fecha_fin,
+                                   hora_inicio="00:00", hora_fin="23:59",
+                                   id_cliente=None, id_servicio=None, origen="torneo") -> dict:
+        """
+        Crea reservas para un torneo usando los turnos disponibles dentro del rango de fechas y horas.
+        Cada turno se reserva en su propia transacción para evitar bloqueos.
+        Devuelve un dict con:
+            - 'exitosas': lista de reservas creadas
+            - 'fallidas': lista de dicts con turno y error
+        """
+        repo_reserva = ReservaRepository()
+        repo_turno = TurnoRepository()
+
+        # Obtener turnos disponibles
+        turnos_disponibles = repo_turno.obtener_disponibles_en_rango_completo(
+            fecha_inicio, fecha_fin, hora_inicio, hora_fin, ids_canchas
+        )
+
+        if not turnos_disponibles:
+            raise ValueError(
+                "No hay turnos disponibles en el rango indicado para las canchas seleccionadas."
+            )
+
+        exitosas = []
+        fallidas = []
+
+        for turno in turnos_disponibles:
+            try:
+                repo_reserva.iniciar_transaccion()  # abrir transacción por turno
+
+                # Marcar turno como reservado
+                repo_turno.marcar_como_reservado(turno.id_turno)
+
+                # Crear reserva
+                reserva = Reserva(
+                    id_cancha=turno.id_cancha,
+                    id_turno=turno.id_turno,
+                    id_cliente=id_cliente,
+                    id_torneo=id_torneo,
+                    id_servicio=id_servicio,
+                    precio_total=0,  # se puede calcular después
+                    estado="pendiente",
+                    origen=origen
+                )
+                reserva = repo_reserva.agregar(reserva)
+
+                repo_reserva.confirmar_transaccion()  # commit por turno
+                exitosas.append(reserva)
+
+            except Exception as e:
+                repo_reserva.revertir_transaccion()
+                fallidas.append(
+                    {"turno": turno.id_turno, "cancha": turno.id_cancha, "error": str(e)}
+                )
+
+        return {"exitosas": exitosas, "fallidas": fallidas}
+

@@ -117,3 +117,43 @@ def eliminar_torneo(id_torneo: int):
         return {"mensaje": f"Torneo {id_torneo} eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al eliminar torneo: {str(e)}")
+
+from fastapi import Body
+from datetime import date
+
+# ============================
+# POST /torneos/{id_torneo}/reservas
+# ============================
+@router.post("/{id_torneo}/reservas", summary="Generar reservas automáticas para un torneo")
+def generar_reservas_torneo(
+    id_torneo: int,
+    ids_canchas: list[int] = Body(..., example=[1, 2]),
+    fecha_inicio: date = Body(..., example="2025-12-01"),
+    fecha_fin: date = Body(..., example="2025-12-03"),
+    hora_inicio: str = Body("08:00", example="08:00"),
+    hora_fin: str = Body("20:00", example="20:00"),
+    id_cliente: int = Body(..., example=1),
+    id_servicio: int | None = Body(None, example=None),
+    origen: str = Body("torneo")
+):
+    """
+    Genera reservas automáticas para un torneo usando los turnos disponibles
+    dentro del rango de fechas, horas y canchas indicadas.
+    Devuelve un dict con listas de reservas exitosas y fallidas.
+    """
+    try:
+        resultado = service.crear_reservas_para_torneo(
+            id_torneo=id_torneo,
+            ids_canchas=ids_canchas,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            id_cliente=id_cliente,
+            id_servicio=id_servicio,
+            origen=origen
+        )
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al generar reservas: {str(e)}")
+
