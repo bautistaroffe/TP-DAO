@@ -93,3 +93,13 @@ class ReservaRepository(BaseRepository):
                 ORDER BY c.nombre, mes; \
                 """
         return self.obtener_todos(query, (str(año),))
+
+    def agregar_varias(self, reservas: list[Reserva]):
+        """
+        Agrega varias reservas de manera secuencial usando el método agregar existente.
+        Devuelve la lista de reservas con sus IDs asignados.
+        """
+        for i, reserva in enumerate(reservas):
+            reservas[i] = self.agregar(reserva)
+        return reservas
+

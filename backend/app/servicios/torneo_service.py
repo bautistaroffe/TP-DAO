@@ -238,6 +238,8 @@ class TorneoService:
         """
         repo_reserva = ReservaRepository()
         repo_turno = TurnoRepository()
+        repo_cancha = CanchaRepository()
+        repo_servicio = ServicioAdicionalRepository()
 
         # Obtener turnos disponibles
         turnos_disponibles = repo_turno.obtener_disponibles_en_rango_completo(
@@ -266,11 +268,18 @@ class TorneoService:
                     id_cliente=id_cliente,
                     id_torneo=id_torneo,
                     id_servicio=id_servicio,
-                    precio_total=0,  # se puede calcular después
                     estado="pendiente",
                     origen=origen
                 )
                 reserva = repo_reserva.agregar(reserva)
+
+                # Calcular precio usando cancha y servicio
+                cancha = repo_cancha.obtener_por_id(turno.id_cancha)
+                servicio = repo_servicio.obtener_por_id(id_servicio) if id_servicio else None
+                reserva.calcular_costo_reserva(cancha, servicio)
+
+                # Actualizar reserva con precio calculado
+                repo_reserva.actualizar(reserva)
 
                 repo_reserva.confirmar_transaccion()  # commit por turno
                 exitosas.append(reserva)
@@ -282,4 +291,5 @@ class TorneoService:
                 )
 
         return {"exitosas": exitosas, "fallidas": fallidas}
+
 

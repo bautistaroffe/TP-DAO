@@ -12,6 +12,7 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
     ids_canchas: [],
     hora_inicio: "08:00",
     hora_fin: "20:00",
+    id_cliente: "", // nuevo campo
   });
 
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,6 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
 
   const categorias = ["Sub 10", "Sub 12", "Sub 14", "Sub 16"];
 
-  // Simulación de canchas disponibles
   const canchasDisponibles = [
     { id: 1, nombre: "Cancha 1" },
     { id: 2, nombre: "Cancha 2" },
@@ -28,7 +28,6 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
     { id: 4, nombre: "Cancha 4" },
   ];
 
-  // Cargar torneo si estamos editando
   useEffect(() => {
     if (!isEditing) return;
     setLoading(true);
@@ -44,6 +43,7 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
           ids_canchas: data.ids_canchas ?? [],
           hora_inicio: data.hora_inicio ?? "08:00",
           hora_fin: data.hora_fin ?? "20:00",
+          id_cliente: data.id_cliente ?? "", // cargar si existe
         });
         setLoading(false);
       })
@@ -87,14 +87,13 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
         torneoCreado = await torneoService.crearTorneo(payload);
         setSuccessMessage("Torneo creado con éxito");
 
-        // Generar reservas con canchas seleccionadas
         const reservasPayload = {
           ids_canchas: formData.ids_canchas,
           fecha_inicio: formData.fecha_inicio,
           fecha_fin: formData.fecha_fin,
           hora_inicio: formData.hora_inicio,
           hora_fin: formData.hora_fin,
-          id_cliente: 1,
+          id_cliente: Number(formData.id_cliente), // usar el id ingresado
           id_servicio: null,
           origen: "torneo",
         };
@@ -172,6 +171,21 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
                 </select>
               </div>
 
+              {/* Nuevo input para ID cliente */}
+              <div className="mb-3">
+                <label className="form-label">ID Cliente</label>
+                <input
+                  type="number"
+                  name="id_cliente"
+                  placeholder="Ingrese el ID del cliente"
+                  value={formData.id_cliente}
+                  onChange={handleChange}
+                  className="form-control"
+                  required
+                  min={1}
+                />
+              </div>
+
               <div className="mb-3">
                 <label className="form-label">Canchas</label>
                 <div className="d-flex flex-wrap gap-3">
@@ -214,6 +228,7 @@ const TorneoForm = ({ id_torneo, onSuccess, onCancel }) => {
 };
 
 export default TorneoForm;
+
 
 
 
